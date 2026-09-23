@@ -16,12 +16,9 @@ set(SOURCE_FILES
 
 add_executable(ExchEng ${SOURCE_FILES})
 
-# Include directories (PUBLIC so game can access them)
 target_include_directories(ExchEng
   PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/include
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/third_party
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/third_party/imgui
 )
 
 target_compile_options(ExchEng PRIVATE
