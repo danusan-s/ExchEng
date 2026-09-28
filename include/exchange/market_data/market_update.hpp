@@ -60,6 +60,6 @@ struct MEMarketUpdate {
 
 #pragma pack(pop)
 
-typedef common::LFQueue<MEMarketUpdate> MEMarketUpdateLFQueue;
+using MarketUpdateQueue = common::LFQueue<MEMarketUpdate>;
 
 } // namespace exchange

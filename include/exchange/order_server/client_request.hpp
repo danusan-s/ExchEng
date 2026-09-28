@@ -55,6 +55,6 @@ struct MEClientRequest {
 
 #pragma pack(pop)
 
-using MEClientRequestQueue = common::LFQueue<MEClientRequest>;
+using ClientRequestQueue = common::LFQueue<MEClientRequest>;
 
 } // namespace exchange
