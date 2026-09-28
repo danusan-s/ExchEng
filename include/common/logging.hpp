@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cstdio>
 #include <fstream>
 #include <string>
 
@@ -10,7 +9,8 @@
 #include "time_utils.hpp"
 
 namespace common {
-constexpr size_t LOG_QUEUE_SIZE = 8 * 1024 * 1024;
+
+inline constexpr size_t LOG_QUEUE_SIZE = 8 * 1024 * 1024;
 
 enum class LogType : int8_t {
   CHAR = 0,
