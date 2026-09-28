@@ -25,4 +25,20 @@ std::string MEOrder::toString() const {
   return oss.str();
 }
 
+std::string MEOrdersAtPrice::toString() const {
+  std::ostringstream oss;
+  oss << "MEOrdersAtPrice ["
+      << "side: " << sideToString(m_side)
+      << ", price: " << priceToString(m_price) << ", firstOrder: "
+      << (orderIdToString(m_firstOrder ? m_firstOrder->m_marketOrderId
+                                       : INVALID_ORDER_ID))
+      << ", nextEntry: "
+      << (priceToString(m_nextEntry ? m_nextEntry->m_price : INVALID_PRICE))
+      << ", prevEntry: "
+      << (priceToString(m_prevEntry ? m_prevEntry->m_price : INVALID_PRICE))
+      << "]";
+
+  return oss.str();
+}
+
 } // namespace exchange

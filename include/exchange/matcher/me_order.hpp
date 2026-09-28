@@ -41,4 +41,27 @@ struct MEOrder {
 using OrderHashMap = std::array<MEOrder *, ME_MAX_ORDER_IDS>;
 using ClientOrderHashMap = std::array<OrderHashMap, ME_MAX_NUM_CLIENTS>;
 
+// A linked list holding MEOrder linked lists for a given price and side.
+struct MEOrdersAtPrice {
+  Side m_side = Side::INVALID;
+  Price m_price = INVALID_PRICE;
+
+  MEOrder *m_firstOrder = nullptr;
+
+  MEOrdersAtPrice *m_nextEntry = nullptr;
+  MEOrdersAtPrice *m_prevEntry = nullptr;
+
+  MEOrdersAtPrice() = default;
+
+  MEOrdersAtPrice(Side side, Price price, MEOrder *firstOrder,
+                  MEOrdersAtPrice *nextEntry, MEOrdersAtPrice *prevEntry)
+      : m_side(side), m_price(price), m_firstOrder(firstOrder),
+        m_nextEntry(nextEntry), m_prevEntry(prevEntry) {
+  }
+
+  std::string toString() const;
+};
+
+using OrdersAtPriceHashMap = std::array<MEOrdersAtPrice *, ME_MAX_PRICE_LEVELS>;
+
 } // namespace exchange
