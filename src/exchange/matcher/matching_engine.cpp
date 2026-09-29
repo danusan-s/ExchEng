@@ -1,4 +1,5 @@
 #include "exchange/matcher/matching_engine.hpp"
+#include "exchange/order_server/client_request.hpp"
 
 namespace exchange {
 
@@ -52,10 +53,52 @@ void MatchingEngine::run() noexcept {
       m_logger.log("%:% %() % Processing %\n", __FILE__, __LINE__, __FUNCTION__,
                    common::getCurrentTimeStr(&m_timeStr),
                    meClientRequest->toString());
-      // processClientRequest(me_client_request);
+      processClientRequest(meClientRequest);
       m_clientRequestQueue->updateReadIndex();
     }
   }
+}
+
+void MatchingEngine::processClientRequest(
+    const MEClientRequest *meClientRequest) noexcept {
+  auto orderBook = m_tickerOrderBooks[meClientRequest->m_tickerId];
+  switch (meClientRequest->m_type) {
+    case exchange::ClientRequestType::NEW: {
+      orderBook->add(meClientRequest->m_clientId, meClientRequest->m_orderId,
+                     meClientRequest->m_tickerId, meClientRequest->m_side,
+                     meClientRequest->m_price, meClientRequest->m_quantity);
+
+    } break;
+    case exchange::ClientRequestType::CANCEL: {
+      orderBook->cancel(meClientRequest->m_clientId, meClientRequest->m_orderId,
+                        meClientRequest->m_tickerId);
+    } break;
+    default:
+      m_logger.log("%:% %() % Unknown request type: %\n", __FILE__, __LINE__,
+                   __FUNCTION__, common::getCurrentTimeStr(&m_timeStr),
+                   clientRequestTypeToString(meClientRequest->m_type));
+      break;
+  }
+}
+
+void MatchingEngine::sendClientResponse(
+    const MEClientResponse *meClientResponse) noexcept {
+  m_logger.log("%:% %() % Sending %\n", __FILE__, __LINE__, __FUNCTION__,
+               common::getCurrentTimeStr(&m_timeStr),
+               meClientResponse->toString());
+  auto nextWriteIndex = m_clientResponseQueue->getNextToWriteTo();
+  *nextWriteIndex = std::move(*meClientResponse);
+  m_clientResponseQueue->updateWriteIndex();
+}
+
+void MatchingEngine::sendMarketUpdate(
+    const MEMarketUpdate *meMarketUpdate) noexcept {
+  m_logger.log("%:% %() % Sending %\n", __FILE__, __LINE__, __FUNCTION__,
+               common::getCurrentTimeStr(&m_timeStr),
+               meMarketUpdate->toString());
+  auto nextWriteIndex = m_marketUpdateQueue->getNextToWriteTo();
+  *nextWriteIndex = std::move(*meMarketUpdate);
+  m_marketUpdateQueue->updateWriteIndex();
 }
 
 }; // namespace exchange

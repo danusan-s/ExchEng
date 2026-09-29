@@ -27,8 +27,6 @@ public:
   MatchingEngine &operator=(MatchingEngine &&) = delete;
 
 private:
-  void run() noexcept;
-
   OrderBookHashMap m_tickerOrderBooks;
 
   // Incoming request from the order gateway to the matching engine
@@ -45,6 +43,11 @@ private:
 
   std::string m_timeStr;
   Logger m_logger;
+
+  void run() noexcept;
+  void processClientRequest(const MEClientRequest *meClientRequest) noexcept;
+  void sendClientResponse(const MEClientResponse *meClientResponse) noexcept;
+  void sendMarketUpdate(const MEMarketUpdate *meMarketUpdate) noexcept;
 };
 
 } // namespace exchange
