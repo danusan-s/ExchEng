@@ -14,7 +14,10 @@ enum class MarketUpdateType : uint8_t {
   ADD = 1,
   MODIFY = 2,
   CANCEL = 3,
-  TRADE = 4
+  TRADE = 4,
+  CLEAR = 5,
+  SNAPSHOT_START = 6,
+  SNAPSHOT_END = 7
 };
 
 inline std::string marketUpdateTypeToString(MarketUpdateType type) {
@@ -27,6 +30,12 @@ inline std::string marketUpdateTypeToString(MarketUpdateType type) {
       return "CANCEL";
     case MarketUpdateType::TRADE:
       return "TRADE";
+    case MarketUpdateType::CLEAR:
+      return "CLEAR";
+    case MarketUpdateType::SNAPSHOT_START:
+      return "SNAPSHOT_START";
+    case MarketUpdateType::SNAPSHOT_END:
+      return "SNAPSHOT_END";
     case MarketUpdateType::INVALID:
       return "INVALID";
   }
@@ -58,8 +67,22 @@ struct MEMarketUpdate {
   }
 };
 
+struct MDPMarketUpdate {
+  size_t m_seqNum = 0;
+  MEMarketUpdate m_marketUpdate;
+
+  std::string toString() const {
+    std::stringstream ss;
+    ss << "MDPMarketUpdate"
+       << " ["
+       << " seqNum:" << m_seqNum << " " << m_marketUpdate.toString() << "]";
+    return ss.str();
+  }
+};
+
 #pragma pack(pop)
 
 using MarketUpdateQueue = common::LFQueue<MEMarketUpdate>;
+using MDPMarketUpdateQueue = common::LFQueue<MDPMarketUpdate>;
 
 } // namespace exchange

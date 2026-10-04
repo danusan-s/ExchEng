@@ -53,6 +53,18 @@ struct MEClientRequest {
   }
 };
 
+struct OMClientRequest {
+  size_t m_seqNum = 0;
+  MEClientRequest m_request;
+
+  std::string toString() const {
+    std::ostringstream oss;
+    oss << "OMClientRequest ["
+        << "seqNum: " << m_seqNum << " " << m_request.toString() << "]";
+    return oss.str();
+  }
+};
+
 #pragma pack(pop)
 
 using ClientRequestQueue = common::LFQueue<MEClientRequest>;

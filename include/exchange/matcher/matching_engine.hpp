@@ -42,11 +42,11 @@ private:
   // Outgoing market update from the matching engine to the market data gateway
   MarketUpdateQueue *m_marketUpdateQueue = nullptr;
 
-  // Can be accessed by multiple threads so volatile
-  std::atomic<bool> m_running = false;
-
   std::string m_timeStr;
   Logger m_logger;
+
+  // Can be accessed by multiple threads so volatile
+  std::atomic<bool> m_running = false;
 };
 
 } // namespace exchange

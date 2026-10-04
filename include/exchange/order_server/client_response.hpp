@@ -60,6 +60,18 @@ struct MEClientResponse {
   }
 };
 
+struct OMClientResponse {
+  size_t m_seqNum = 0;
+  MEClientResponse m_response;
+
+  std::string toString() const {
+    std::ostringstream oss;
+    oss << "OMClientResponse ["
+        << "seqNum: " << m_seqNum << " " << m_response.toString() << "]";
+    return oss.str();
+  }
+};
+
 #pragma pack(pop)
 
 using ClientResponseQueue = common::LFQueue<MEClientResponse>;
