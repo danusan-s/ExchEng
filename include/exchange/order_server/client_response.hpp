@@ -40,6 +40,7 @@ struct MEClientResponse {
   TickerId m_tickerId = INVALID_TICKER_ID;
   OrderId m_clientOrderId = INVALID_ORDER_ID;
   OrderId m_marketOrderId = INVALID_ORDER_ID;
+  Side m_side = Side::INVALID;
   Price m_price = INVALID_PRICE;
   Quantity m_execQty = INVALID_QUANTITY;
   Quantity m_leavesQty = INVALID_QUANTITY;
@@ -51,6 +52,8 @@ struct MEClientResponse {
         << ", clientId: " << clientIdToString(m_clientId)
         << ", tickerId: " << tickerIdToString(m_tickerId)
         << ", orderId: " << orderIdToString(m_clientOrderId)
+        << ", marketOrderId: " << orderIdToString(m_marketOrderId)
+        << ", side: " << sideToString(m_side)
         << ", price: " << priceToString(m_price)
         << ", quantity: " << quantityToString(m_execQty) << "]";
     return oss.str();

@@ -11,6 +11,9 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 set(SOURCE_FILES
+  src/exchange/matcher/matching_engine.cpp
+  src/exchange/matcher/me_order.cpp
+  src/exchange/matcher/me_order_book.cpp
   src/exchange/main.cpp
 )
 

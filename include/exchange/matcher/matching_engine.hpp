@@ -19,6 +19,10 @@ public:
 
   void start();
   void stop();
+  void run() noexcept;
+  void processClientRequest(const MEClientRequest *meClientRequest) noexcept;
+  void sendClientResponse(const MEClientResponse *meClientResponse) noexcept;
+  void sendMarketUpdate(const MEMarketUpdate *meMarketUpdate) noexcept;
 
   MatchingEngine() = delete;
   MatchingEngine(const MatchingEngine &) = delete;
@@ -43,11 +47,6 @@ private:
 
   std::string m_timeStr;
   Logger m_logger;
-
-  void run() noexcept;
-  void processClientRequest(const MEClientRequest *meClientRequest) noexcept;
-  void sendClientResponse(const MEClientResponse *meClientResponse) noexcept;
-  void sendMarketUpdate(const MEMarketUpdate *meMarketUpdate) noexcept;
 };
 
 } // namespace exchange

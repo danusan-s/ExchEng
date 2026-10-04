@@ -8,7 +8,7 @@
 
 namespace common {
 
-// Single producer single consumer lock free queue
+// Single produce single consumer safe queue
 template <typename T> class LFQueue final {
 public:
   explicit LFQueue(std::size_t num_elems) : m_store(num_elems, T()) {
