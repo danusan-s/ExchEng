@@ -12,10 +12,10 @@ namespace common {
 // Single produce single consumer safe queue
 template <typename T> class LFQueue final {
 public:
-  explicit LFQueue(std::size_t num_elems) : m_store(num_elems, T()) {
-    ASSERT(num_elems < 2 || std::popcount(num_elems),
+  explicit LFQueue(std::size_t numElems) : m_store(numElems, T()) {
+    ASSERT(numElems > 2 && std::popcount(numElems) == 1,
            "LFQueue size must be a power of 2 for efficient modulo operation.");
-    m_mask = num_elems - 1;
+    m_mask = numElems - 1;
   }
 
   T *getNextToWriteTo() noexcept {
