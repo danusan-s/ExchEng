@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-inline auto ASSERT(bool cond, const std::string &msg) noexcept {
+inline void ASSERT(bool cond, const std::string &msg) noexcept {
   if (!cond) [[unlikely]] {
     std::cerr << "ASSERT : " << msg << std::endl;
 
@@ -10,7 +10,7 @@ inline auto ASSERT(bool cond, const std::string &msg) noexcept {
   }
 }
 
-inline auto FATAL(const std::string &msg) noexcept {
+inline void FATAL(const std::string &msg) noexcept {
   std::cerr << "FATAL : " << msg << std::endl;
 
   exit(EXIT_FAILURE);
