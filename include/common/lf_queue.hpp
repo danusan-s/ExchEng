@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <bit>
 #include <string>
 #include <vector>
 
@@ -12,6 +13,9 @@ namespace common {
 template <typename T> class LFQueue final {
 public:
   explicit LFQueue(std::size_t num_elems) : m_store(num_elems, T()) {
+    ASSERT(num_elems < 2 || std::popcount(num_elems),
+           "LFQueue size must be a power of 2 for efficient modulo operation.");
+    m_mask = num_elems - 1;
   }
 
   T *getNextToWriteTo() noexcept {
@@ -19,7 +23,7 @@ public:
   }
 
   void updateWriteIndex() noexcept {
-    m_nextWriteIndex = (m_nextWriteIndex + 1) % m_store.size();
+    m_nextWriteIndex = (m_nextWriteIndex + 1) & m_mask;
     m_numElements++;
   }
 
@@ -28,7 +32,7 @@ public:
   }
 
   void updateReadIndex() noexcept {
-    m_nextReadIndex = (m_nextReadIndex + 1) % m_store.size();
+    m_nextReadIndex = (m_nextReadIndex + 1) & m_mask;
     ASSERT(m_numElements != 0,
            "Read an invalid element in:" + std::to_string(pthread_self()));
     m_numElements--;
@@ -46,6 +50,7 @@ public:
 
 private:
   std::vector<T> m_store;
+  size_t m_mask = 0;
 
   std::atomic<size_t> m_nextWriteIndex = {0};
   std::atomic<size_t> m_nextReadIndex = {0};
