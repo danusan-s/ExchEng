@@ -7,10 +7,10 @@ namespace common {
 
 using Nanos = int64_t;
 
-constexpr Nanos NANO_TO_MICROS = 1000;
+constexpr Nanos NANOS_TO_MICROS = 1000;
 constexpr Nanos MICROS_TO_MILLIS = 1000;
 constexpr Nanos MILLIS_TO_SECS = 1000;
-constexpr Nanos NANOS_TO_MILLIS = NANO_TO_MICROS * MICROS_TO_MILLIS;
+constexpr Nanos NANOS_TO_MILLIS = NANOS_TO_MICROS * MICROS_TO_MILLIS;
 constexpr Nanos NANOS_TO_SECS = NANOS_TO_MILLIS * MILLIS_TO_SECS;
 
 inline auto getCurrentNanos() noexcept {
