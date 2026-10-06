@@ -83,6 +83,6 @@ struct MDPMarketUpdate {
 #pragma pack(pop)
 
 using MarketUpdateQueue = common::LFQueue<MEMarketUpdate>;
-using MDPMarketUpdateQueue = common::LFQueue<MDPMarketUpdate>;
+using SnapshotUpdateQueue = common::LFQueue<MDPMarketUpdate>;
 
 } // namespace exchange

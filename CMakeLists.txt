@@ -16,8 +16,11 @@ set(EXCHANGE_SOURCE_FILES
   src/exchange/matcher/me_order_book.cpp
   src/exchange/order_server/order_server.cpp
   src/exchange/order_server/fifo_sequencer.cpp
+  src/exchange/market_data/market_data_publisher.cpp
+  src/exchange/market_data/snapshot_synthesizer.cpp
   src/common/tcp_server.cpp
   src/common/tcp_socket.cpp
+  src/common/multicast_socket.cpp
   src/exchange/main.cpp
 )
 

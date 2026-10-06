@@ -2,16 +2,18 @@
 
 #include "common/constants.hpp"
 #include "common/logging.hpp"
+#include "exchange/market_data/market_data_publisher.hpp"
 #include "exchange/matcher/matching_engine.hpp"
 #include "exchange/order_server/order_server.hpp"
 
 common::Logger *g_logger = nullptr;
 exchange::MatchingEngine *g_matchingEngine = nullptr;
 exchange::OrderServer *g_orderServer = nullptr;
+exchange::MarketDataPublisher *g_marketDataPublisher = nullptr;
 
 void signalHandler(int) {
   std::cerr
-      << "SIGINT received. Shutting down matching engine and order server."
+      << "\nSIGINT received. Shutting down matching engine and order server."
       << std::endl;
 
   using namespace std::literals::chrono_literals;
@@ -51,6 +53,10 @@ int main() {
   g_orderServer = new exchange::OrderServer(&clientRequestQueue,
                                             &clientResponseQueue, "lo", 5000);
   g_orderServer->start();
+
+  g_marketDataPublisher = new exchange::MarketDataPublisher(
+      &marketUpdateQueue, "lo", "", 5001, "", 5002);
+  g_marketDataPublisher->start();
 
   while (true) {
     std::this_thread::sleep_for(std::chrono::seconds(1));
