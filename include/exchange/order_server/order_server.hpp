@@ -5,6 +5,7 @@
 #include "common/constants.hpp"
 #include "common/logging.hpp"
 #include "common/tcp_server.hpp"
+#include "common/tcp_socket.hpp"
 #include "fifo_sequencer.hpp"
 
 using namespace common;
@@ -47,7 +48,7 @@ private:
 
   std::atomic<bool> m_running = false;
 
-  void recvCallback(auto socket, auto rx_time) noexcept;
+  void recvCallback(TCPSocket *socket, Nanos rx_time) noexcept;
   void recvFinishedCallback() noexcept;
 };
 

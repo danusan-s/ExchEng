@@ -10,14 +10,18 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type" FORCE)
 endif()
 
-set(SOURCE_FILES
+set(EXCHANGE_SOURCE_FILES
   src/exchange/matcher/matching_engine.cpp
   src/exchange/matcher/me_order.cpp
   src/exchange/matcher/me_order_book.cpp
+  src/exchange/order_server/order_server.cpp
+  src/exchange/order_server/fifo_sequencer.cpp
+  src/common/tcp_server.cpp
+  src/common/tcp_socket.cpp
   src/exchange/main.cpp
 )
 
-add_executable(ExchEng ${SOURCE_FILES})
+add_executable(ExchEng ${EXCHANGE_SOURCE_FILES})
 
 target_include_directories(ExchEng
   PRIVATE
