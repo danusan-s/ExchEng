@@ -34,6 +34,8 @@ MarketDataPublisher::~MarketDataPublisher() noexcept {
 
 void MarketDataPublisher::start() {
   m_running.store(true, std::memory_order_relaxed);
+  m_snapshotSynthesizer->start();
+
   ASSERT(common::createAndStartThread(-1, "MarketDataPublisher",
                                       [this]() { run(); }) != nullptr,
          "Failed to start MarketDataPublisher thread.");
@@ -41,6 +43,7 @@ void MarketDataPublisher::start() {
 
 void MarketDataPublisher::stop() {
   m_running.store(false, std::memory_order_relaxed);
+  m_snapshotSynthesizer->stop();
 }
 
 void MarketDataPublisher::run() noexcept {
@@ -68,6 +71,9 @@ void MarketDataPublisher::run() noexcept {
     }
     m_incrementalUpdateSocket.sendAndRecv();
   }
+
+  m_logger.log("%:% %() % MarketDataPublisher stopped\n", __FILE__, __LINE__,
+               __FUNCTION__, common::getCurrentTimeStr(&m_timeStr));
 }
 
 } // namespace exchange

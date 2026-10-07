@@ -36,6 +36,10 @@ int main() {
   g_logger = new common::Logger("main.log");
 
   std::string timeStr;
+  const std::string iface = "lo";
+  const int orderServerPort = 5000;
+  const int incrementalUpdatePort = 5001;
+  const int snapshotPort = 5002;
 
   g_logger->log("%:% %() % Starting matching engine\n", __FILE__, __LINE__,
                 __FUNCTION__, common::getCurrentTimeStr(&timeStr));
@@ -50,12 +54,12 @@ int main() {
       &clientRequestQueue, &clientResponseQueue, &marketUpdateQueue);
   g_matchingEngine->start();
 
-  g_orderServer = new exchange::OrderServer(&clientRequestQueue,
-                                            &clientResponseQueue, "lo", 5000);
+  g_orderServer = new exchange::OrderServer(
+      &clientRequestQueue, &clientResponseQueue, iface, orderServerPort);
   g_orderServer->start();
 
   g_marketDataPublisher = new exchange::MarketDataPublisher(
-      &marketUpdateQueue, "lo", "", 5001, "", 5002);
+      &marketUpdateQueue, iface, "", snapshotPort, "", incrementalUpdatePort);
   g_marketDataPublisher->start();
 
   while (true) {

@@ -39,7 +39,7 @@ private:
 
   std::atomic<bool> m_running = false;
 
-  SnapshotUpdateQueue m_snapshotUpdateQueue;
+  MDPMarketUpdateQueue m_snapshotUpdateQueue;
   SnapshotSynthesizer *m_snapshotSynthesizer = nullptr;
 };
 

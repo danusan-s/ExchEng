@@ -59,7 +59,7 @@ void OrderServer::run() noexcept {
                    __FILE__, __LINE__, __FUNCTION__,
                    common::getCurrentTimeStr(&m_timeStr),
                    clientResponse->m_clientId, nextOutSeqNum,
-                   clientResponse->toString());
+                   clientResponse->toString().c_str());
 
       auto socket = m_cidSockets[clientResponse->m_clientId];
 
@@ -81,7 +81,7 @@ void OrderServer::run() noexcept {
 void OrderServer::recvCallback(TCPSocket *socket, Nanos rxTime) noexcept {
   m_logger.log("%:% %() % Received data from socket % at time %\n", __FILE__,
                __LINE__, __FUNCTION__, common::getCurrentTimeStr(&m_timeStr),
-               socket->m_socketFd, socket->m_nextReceiveValidIndex, rxTime);
+               socket->m_socketFd, rxTime);
 
   if (socket->m_nextReceiveValidIndex > sizeof(OMClientRequest)) {
     size_t i = 0;

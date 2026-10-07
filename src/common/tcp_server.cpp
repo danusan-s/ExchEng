@@ -101,7 +101,7 @@ auto TCPServer::poll() noexcept -> void {
            "Failed to set non-blocking or no-delay on socket:" +
                std::to_string(fd));
 
-    m_logger.log("%:% %() % accepted socket:%\n", __FILE__, __LINE__,
+    m_logger.log("%:% %() % accepted socket: %\n", __FILE__, __LINE__,
                  __FUNCTION__, common::getCurrentTimeStr(&m_timeStr), fd);
 
     auto socket = new TCPSocket(m_logger);

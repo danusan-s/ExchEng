@@ -24,6 +24,9 @@ enum class LogType : int8_t {
   DOUBLE = 8
 };
 
+// TODO: a single char doesn't take advantage of the sizing of the union.
+// Maybe logger can own strings, copy string and union holds the pointer
+// Once string is done with then we free it.
 struct LogElement {
   LogType type_ = LogType::CHAR;
   union {
@@ -43,9 +46,10 @@ class Logger final {
 public:
   auto flushQueue() noexcept {
     while (m_running) {
-
+      bool written = false;
       for (auto next = m_queue.getNextToRead(); m_queue.size() && next;
            next = m_queue.getNextToRead()) {
+        written = true;
         switch (next->type_) {
           case LogType::CHAR:
             m_file << next->u_.c;
@@ -77,7 +81,9 @@ public:
         }
         m_queue.updateReadIndex();
       }
-      m_file.flush();
+      if (written) {
+        m_file.flush();
+      }
 
       using namespace std::literals::chrono_literals;
       std::this_thread::sleep_for(10ms);
@@ -178,7 +184,11 @@ public:
       }
       pushValue(*s++);
     }
-    FATAL("extra arguments provided to log()");
+    pushValue("ERROR: extra arguments provided to log()\n");
+    using namespace std::literals::chrono_literals;
+    std::this_thread::sleep_for(1s);
+    FATAL("extra arguments provided to log(), "
+          "check logs to narrow down the issue.");
   }
 
   // note that this is overloading not specialization. gcc does not allow inline
