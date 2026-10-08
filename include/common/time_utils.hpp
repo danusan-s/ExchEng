@@ -30,8 +30,8 @@ inline auto &getCurrentTimeStr(std::string *time_str) {
                 now.time_since_epoch()) %
             1000;
 
-  oss << "[ " << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S")
-      << '.' << std::setfill('0') << std::setw(3) << ms.count() << " ] ";
+  oss << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << '.'
+      << std::setfill('0') << std::setw(3) << ms.count() << "] ";
   time_str->assign(oss.str());
 
   return *time_str;

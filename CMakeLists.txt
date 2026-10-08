@@ -48,6 +48,12 @@ target_compile_options(ExchEng PRIVATE
     -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Woverloaded-virtual -Werror
 )
 
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+  target_compile_options(ExchEng PRIVATE
+    "-ffile-prefix-map=${CMAKE_CURRENT_SOURCE_DIR}/="
+  )
+endif()
+
 # Google Test
 include(FetchContent)
 FetchContent_Declare(
