@@ -7,7 +7,25 @@ Goal of this project is to just get my hands dirty with low latency programming 
 
 ## Components
 
-Market side : order book, matching engine, market data publisher, and order gateway.
-Participant side : order gateway, participant's own order book, and market data subscriber.
+### Market/Exchange side:
+
+4 threads running:
+- Matching engine : Maintains order book and logic
+- Order server : Maintains client connections, fifo sequencing 
+- Market data publisher : Publishes market updates on multicast socket
+- Snapshot publisher : Accumulates updates and publishes final state on another multicast socket
+
+Each component thread talks to each other through the lock free queue.
+The queue is single producer thread and single consumer thread friendly.
+Each component also comes with it's own logger (and it's consumer thread).
+
+### Client/Trader side:
+
+This part is WIP, but this is the general plan
+
+- A client to connect to order gateway
+- Client's own copy of order book rebuilt from updates
+- Subscribe to market data
+- Subscribe to snapshots
 
 
