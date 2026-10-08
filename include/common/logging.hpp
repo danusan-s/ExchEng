@@ -44,7 +44,61 @@ struct LogElement {
 
 class Logger final {
 public:
-  auto flushQueue() noexcept {
+  explicit Logger(const std::string &file_name)
+      : m_fileName(file_name), m_queue(LOG_QUEUE_SIZE) {
+    m_file.open(file_name);
+    ASSERT(m_file.is_open(), "Could not open log file:" + file_name);
+    m_loggerThread = createAndStartThread(-1, "Common/Logger " + m_fileName,
+                                          [this]() { flushQueue(); });
+    ASSERT(m_loggerThread != nullptr, "Failed to start Logger thread.");
+  }
+
+  ~Logger() {
+    std::string time_str;
+    std::cerr << common::getCurrentTimeStr(&time_str)
+              << " Flushing and closing Logger for " << m_fileName << std::endl;
+
+    while (m_queue.size()) {
+      using namespace std::literals::chrono_literals;
+      std::this_thread::sleep_for(1s);
+    }
+    m_running = false;
+    m_loggerThread->join();
+
+    m_file.close();
+    std::cerr << common::getCurrentTimeStr(&time_str) << " Logger for "
+              << m_fileName << " exiting." << std::endl;
+  }
+
+  template <typename... A> void logData(const char *s, A... args) noexcept {
+    pushValue("\033[36m[DATA]\033[0m ");
+    log(s, args...);
+  }
+
+  template <typename... A> void logInfo(const char *s, A... args) noexcept {
+    pushValue("\033[32m[INFO]\033[0m ");
+    log(s, args...);
+  }
+
+  template <typename... A> void logWarn(const char *s, A... args) noexcept {
+    pushValue("\033[33m[WARNING]\033[0m ");
+    log(s, args...);
+  }
+
+  template <typename... A> void logError(const char *s, A... args) noexcept {
+    pushValue("\033[31m[ERROR]\033[0m ");
+    log(s, args...);
+  }
+
+  // Deleted default, copy & move constructors and assignment-operators.
+  Logger() = delete;
+  Logger(const Logger &) = delete;
+  Logger(const Logger &&) = delete;
+  Logger &operator=(const Logger &) = delete;
+  Logger &operator=(const Logger &&) = delete;
+
+private:
+  void flushQueue() noexcept {
     while (m_running) {
       bool written = false;
       for (auto next = m_queue.getNextToRead(); m_queue.size() && next;
@@ -90,86 +144,60 @@ public:
     }
   }
 
-  explicit Logger(const std::string &file_name)
-      : m_fileName(file_name), m_queue(LOG_QUEUE_SIZE) {
-    m_file.open(file_name);
-    ASSERT(m_file.is_open(), "Could not open log file:" + file_name);
-    m_loggerThread = createAndStartThread(-1, "Common/Logger " + m_fileName,
-                                          [this]() { flushQueue(); });
-    ASSERT(m_loggerThread != nullptr, "Failed to start Logger thread.");
-  }
-
-  ~Logger() {
-    std::string time_str;
-    std::cerr << common::getCurrentTimeStr(&time_str)
-              << " Flushing and closing Logger for " << m_fileName << std::endl;
-
-    while (m_queue.size()) {
-      using namespace std::literals::chrono_literals;
-      std::this_thread::sleep_for(1s);
-    }
-    m_running = false;
-    m_loggerThread->join();
-
-    m_file.close();
-    std::cerr << common::getCurrentTimeStr(&time_str) << " Logger for "
-              << m_fileName << " exiting." << std::endl;
-  }
-
-  auto pushValue(const LogElement &log_element) noexcept {
+  void pushValue(const LogElement &log_element) noexcept {
     *(m_queue.getNextToWriteTo()) = log_element;
     m_queue.updateWriteIndex();
   }
 
-  auto pushValue(const char value) noexcept {
+  void pushValue(const char value) noexcept {
     pushValue(LogElement{LogType::CHAR, {.c = value}});
   }
 
-  auto pushValue(const int value) noexcept {
+  void pushValue(const int value) noexcept {
     pushValue(LogElement{LogType::INTEGER, {.i = value}});
   }
 
-  auto pushValue(const long value) noexcept {
+  void pushValue(const long value) noexcept {
     pushValue(LogElement{LogType::LONG_INTEGER, {.l = value}});
   }
 
-  auto pushValue(const long long value) noexcept {
+  void pushValue(const long long value) noexcept {
     pushValue(LogElement{LogType::LONG_LONG_INTEGER, {.ll = value}});
   }
 
-  auto pushValue(const unsigned value) noexcept {
+  void pushValue(const unsigned value) noexcept {
     pushValue(LogElement{LogType::UNSIGNED_INTEGER, {.u = value}});
   }
 
-  auto pushValue(const unsigned long value) noexcept {
+  void pushValue(const unsigned long value) noexcept {
     pushValue(LogElement{LogType::UNSIGNED_LONG_INTEGER, {.ul = value}});
   }
 
-  auto pushValue(const unsigned long long value) noexcept {
+  void pushValue(const unsigned long long value) noexcept {
     pushValue(LogElement{LogType::UNSIGNED_LONG_LONG_INTEGER, {.ull = value}});
   }
 
-  auto pushValue(const float value) noexcept {
+  void pushValue(const float value) noexcept {
     pushValue(LogElement{LogType::FLOAT, {.f = value}});
   }
 
-  auto pushValue(const double value) noexcept {
+  void pushValue(const double value) noexcept {
     pushValue(LogElement{LogType::DOUBLE, {.d = value}});
   }
 
-  auto pushValue(const char *value) noexcept {
+  void pushValue(const char *value) noexcept {
     while (*value) {
       pushValue(*value);
       ++value;
     }
   }
 
-  auto pushValue(const std::string &value) noexcept {
+  void pushValue(const std::string &value) noexcept {
     pushValue(value.c_str());
   }
 
   template <typename T, typename... A>
-  auto log(const char *s, const T &value, A... args) noexcept {
+  void log(const char *s, const T &value, A... args) noexcept {
     while (*s) {
       if (*s == '%') {
         if (*(s + 1) == '%')
@@ -191,9 +219,7 @@ public:
           "check logs to narrow down the issue.");
   }
 
-  // note that this is overloading not specialization. gcc does not allow inline
-  // specializations.
-  auto log(const char *s) noexcept {
+  void log(const char *s) noexcept {
     while (*s) {
       if (*s == '%') {
         if (*(s + 1) == '%')
@@ -207,13 +233,6 @@ public:
     }
   }
 
-  // Deleted default, copy & move constructors and assignment-operators.
-  Logger() = delete;
-  Logger(const Logger &) = delete;
-  Logger(const Logger &&) = delete;
-  Logger &operator=(const Logger &) = delete;
-  Logger &operator=(const Logger &&) = delete;
-
 private:
   const std::string m_fileName;
   std::ofstream m_file;
@@ -222,4 +241,5 @@ private:
   std::atomic<bool> m_running = {true};
   std::thread *m_loggerThread = nullptr;
 };
+
 } // namespace common

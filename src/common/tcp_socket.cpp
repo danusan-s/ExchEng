@@ -44,11 +44,11 @@ auto TCPSocket::sendAndRecv() noexcept -> bool {
 
     const auto userTime = getCurrentNanos();
 
-    m_logger.log("%:% %() % read socket:% len:% utime:% ktime:% diff:%\n",
-                 __FILE__, __LINE__, __FUNCTION__,
-                 common::getCurrentTimeStr(&m_timeStr), m_socketFd,
-                 m_nextReceiveValidIndex, userTime, kernelTime,
-                 (userTime - kernelTime));
+    m_logger.logData("%:% %() % read socket:% len:% utime:% ktime:% diff:%\n",
+                     __FILE__, __LINE__, __FUNCTION__,
+                     common::getCurrentTimeStr(&m_timeStr), m_socketFd,
+                     m_nextReceiveValidIndex, userTime, kernelTime,
+                     (userTime - kernelTime));
     m_recvCallback(this, kernelTime);
   }
 
@@ -56,9 +56,9 @@ auto TCPSocket::sendAndRecv() noexcept -> bool {
     // Non-blocking call to send data.
     const auto n = ::send(m_socketFd, m_outboundData.data(),
                           m_nextSendValidIndex, MSG_DONTWAIT | MSG_NOSIGNAL);
-    m_logger.log("%:% %() % send socket:% len:%\n", __FILE__, __LINE__,
-                 __FUNCTION__, common::getCurrentTimeStr(&m_timeStr),
-                 m_socketFd, n);
+    m_logger.logData("%:% %() % send socket:% len:%\n", __FILE__, __LINE__,
+                     __FUNCTION__, common::getCurrentTimeStr(&m_timeStr),
+                     m_socketFd, n);
   }
   m_nextSendValidIndex = 0;
 

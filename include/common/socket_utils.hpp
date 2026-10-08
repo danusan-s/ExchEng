@@ -100,8 +100,8 @@ inline bool join(int fd, const std::string &ip) {
 
   const auto ip =
       socketCfg.m_ip.empty() ? getIfaceIP(socketCfg.m_iface) : socketCfg.m_ip;
-  logger.log("%:% %() % cfg:%\n", __FILE__, __LINE__, __FUNCTION__,
-             common::getCurrentTimeStr(&timeStr), socketCfg.toString());
+  logger.logData("%:% %() % cfg:%\n", __FILE__, __LINE__, __FUNCTION__,
+                 common::getCurrentTimeStr(&timeStr), socketCfg.toString());
 
   const int inputFlags = (socketCfg.m_isListening ? AI_PASSIVE : 0) |
                          (AI_NUMERICHOST | AI_NUMERICSERV);

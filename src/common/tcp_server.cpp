@@ -53,33 +53,34 @@ auto TCPServer::poll() noexcept -> void {
     // Check for new connections.
     if (event.events & EPOLLIN) {
       if (socket == &m_listenerSocket) {
-        m_logger.log("%:% %() % EPOLLIN listener_socket:%\n", __FILE__,
-                     __LINE__, __FUNCTION__,
-                     common::getCurrentTimeStr(&m_timeStr), socket->m_socketFd);
+        m_logger.logData("%:% %() % EPOLLIN listener_socket:%\n", __FILE__,
+                         __LINE__, __FUNCTION__,
+                         common::getCurrentTimeStr(&m_timeStr),
+                         socket->m_socketFd);
         haveNewConnection = true;
         continue;
       }
-      m_logger.log("%:% %() % EPOLLIN socket:%\n", __FILE__, __LINE__,
-                   __FUNCTION__, common::getCurrentTimeStr(&m_timeStr),
-                   socket->m_socketFd);
+      m_logger.logData("%:% %() % EPOLLIN socket:%\n", __FILE__, __LINE__,
+                       __FUNCTION__, common::getCurrentTimeStr(&m_timeStr),
+                       socket->m_socketFd);
       if (std::find(m_receiveSockets.begin(), m_receiveSockets.end(), socket) ==
           m_receiveSockets.end())
         m_receiveSockets.push_back(socket);
     }
 
     if (event.events & EPOLLOUT) {
-      m_logger.log("%:% %() % EPOLLOUT socket:%\n", __FILE__, __LINE__,
-                   __FUNCTION__, common::getCurrentTimeStr(&m_timeStr),
-                   socket->m_socketFd);
+      m_logger.logData("%:% %() % EPOLLOUT socket:%\n", __FILE__, __LINE__,
+                       __FUNCTION__, common::getCurrentTimeStr(&m_timeStr),
+                       socket->m_socketFd);
       if (std::find(m_sendSockets.begin(), m_sendSockets.end(), socket) ==
           m_sendSockets.end())
         m_sendSockets.push_back(socket);
     }
 
     if (event.events & (EPOLLERR | EPOLLHUP)) {
-      m_logger.log("%:% %() % EPOLLERR socket:%\n", __FILE__, __LINE__,
-                   __FUNCTION__, common::getCurrentTimeStr(&m_timeStr),
-                   socket->m_socketFd);
+      m_logger.logWarn("%:% %() % EPOLLERR socket:%\n", __FILE__, __LINE__,
+                       __FUNCTION__, common::getCurrentTimeStr(&m_timeStr),
+                       socket->m_socketFd);
       if (std::find(m_receiveSockets.begin(), m_receiveSockets.end(), socket) ==
           m_receiveSockets.end())
         m_receiveSockets.push_back(socket);
@@ -88,8 +89,8 @@ auto TCPServer::poll() noexcept -> void {
 
   // Accept a new connection, create a TCPSocket and add it to our containers.
   while (haveNewConnection) {
-    m_logger.log("%:% %() % haveNewConnection\n", __FILE__, __LINE__,
-                 __FUNCTION__, common::getCurrentTimeStr(&m_timeStr));
+    m_logger.logInfo("%:% %() % haveNewConnection\n", __FILE__, __LINE__,
+                     __FUNCTION__, common::getCurrentTimeStr(&m_timeStr));
     sockaddr_storage addr;
     socklen_t addrLen = sizeof(addr);
     int fd = accept(m_listenerSocket.m_socketFd,
@@ -101,8 +102,8 @@ auto TCPServer::poll() noexcept -> void {
            "Failed to set non-blocking or no-delay on socket:" +
                std::to_string(fd));
 
-    m_logger.log("%:% %() % accepted socket: %\n", __FILE__, __LINE__,
-                 __FUNCTION__, common::getCurrentTimeStr(&m_timeStr), fd);
+    m_logger.logInfo("%:% %() % accepted socket: %\n", __FILE__, __LINE__,
+                     __FUNCTION__, common::getCurrentTimeStr(&m_timeStr), fd);
 
     auto socket = new TCPSocket(m_logger);
     socket->m_socketFd = fd;

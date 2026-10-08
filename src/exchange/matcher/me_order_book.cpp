@@ -29,9 +29,9 @@ MEOrderBook::MEOrderBook(TickerId ticker_id, Logger *logger,
 }
 
 MEOrderBook::~MEOrderBook() {
-  m_logger->log("%:% %() % Destroying order book for tickerId=%\n", __FILE__,
-                __LINE__, __FUNCTION__, common::getCurrentTimeStr(&m_timeStr),
-                m_tickerId);
+  m_logger->logInfo("%:% %() % Destroying order book for tickerId=%\n",
+                    __FILE__, __LINE__, __FUNCTION__,
+                    common::getCurrentTimeStr(&m_timeStr), m_tickerId);
   m_matchingEngine = nullptr;
   m_bidsByPrice = nullptr;
   m_asksByPrice = nullptr;

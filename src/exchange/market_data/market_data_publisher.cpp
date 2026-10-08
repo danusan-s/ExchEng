@@ -47,17 +47,18 @@ void MarketDataPublisher::stop() {
 }
 
 void MarketDataPublisher::run() noexcept {
-  m_logger.log("%:% %() % MarketDataPublisher started\n", __FILE__, __LINE__,
-               __FUNCTION__, common::getCurrentTimeStr(&m_timeStr));
+  m_logger.logInfo("%:% %() % MarketDataPublisher started\n", __FILE__,
+                   __LINE__, __FUNCTION__,
+                   common::getCurrentTimeStr(&m_timeStr));
 
   while (m_running.load(std::memory_order_relaxed)) {
     for (auto marketUpdate = m_outgoingUpdateQueue->getNextToRead();
          m_outgoingUpdateQueue->size() && marketUpdate;
          marketUpdate = m_outgoingUpdateQueue->getNextToRead()) {
-      m_logger.log("%:% %() % Publishing market update seq: % %\n", __FILE__,
-                   __LINE__, __FUNCTION__,
-                   common::getCurrentTimeStr(&m_timeStr), m_nextOutSeqNum,
-                   marketUpdate->toString());
+      m_logger.logData("%:% %() % Publishing market update seq: % %\n",
+                       __FILE__, __LINE__, __FUNCTION__,
+                       common::getCurrentTimeStr(&m_timeStr), m_nextOutSeqNum,
+                       marketUpdate->toString());
       m_incrementalUpdateSocket.send(&m_nextOutSeqNum, sizeof(m_nextOutSeqNum));
       m_incrementalUpdateSocket.send(marketUpdate, sizeof(MEMarketUpdate));
       m_outgoingUpdateQueue->updateReadIndex();
@@ -72,8 +73,9 @@ void MarketDataPublisher::run() noexcept {
     m_incrementalUpdateSocket.sendAndRecv();
   }
 
-  m_logger.log("%:% %() % MarketDataPublisher stopped\n", __FILE__, __LINE__,
-               __FUNCTION__, common::getCurrentTimeStr(&m_timeStr));
+  m_logger.logInfo("%:% %() % MarketDataPublisher stopped\n", __FILE__,
+                   __LINE__, __FUNCTION__,
+                   common::getCurrentTimeStr(&m_timeStr));
 }
 
 } // namespace exchange

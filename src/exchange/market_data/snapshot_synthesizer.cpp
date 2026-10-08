@@ -32,16 +32,17 @@ void SnapshotSynthesizer::stop() {
 }
 
 void SnapshotSynthesizer::run() noexcept {
-  m_logger.log("%:% %() % SnapshotSynthesizer started\n", __FILE__, __LINE__,
-               __FUNCTION__, common::getCurrentTimeStr(&m_timeStr));
+  m_logger.logInfo("%:% %() % SnapshotSynthesizer started\n", __FILE__,
+                   __LINE__, __FUNCTION__,
+                   common::getCurrentTimeStr(&m_timeStr));
 
   while (m_running.load(std::memory_order_relaxed)) {
     for (auto snapshotUpdate = m_snapshotUpdateQueue->getNextToRead();
          m_snapshotUpdateQueue->size() && snapshotUpdate;
          snapshotUpdate = m_snapshotUpdateQueue->getNextToRead()) {
-      m_logger.log("%:% %() % Processing %\n", __FILE__, __LINE__, __FUNCTION__,
-                   common::getCurrentTimeStr(&m_timeStr),
-                   snapshotUpdate->toString());
+      m_logger.logData("%:% %() % Processing %\n", __FILE__, __LINE__,
+                       __FUNCTION__, common::getCurrentTimeStr(&m_timeStr),
+                       snapshotUpdate->toString());
       addToSnapshot(snapshotUpdate);
       m_snapshotUpdateQueue->updateReadIndex();
     }
@@ -52,8 +53,9 @@ void SnapshotSynthesizer::run() noexcept {
     }
   }
 
-  m_logger.log("%:% %() % SnapshotSynthesizer stopped\n", __FILE__, __LINE__,
-               __FUNCTION__, common::getCurrentTimeStr(&m_timeStr));
+  m_logger.logInfo("%:% %() % SnapshotSynthesizer stopped\n", __FILE__,
+                   __LINE__, __FUNCTION__,
+                   common::getCurrentTimeStr(&m_timeStr));
 }
 
 void SnapshotSynthesizer::addToSnapshot(
@@ -150,9 +152,9 @@ void SnapshotSynthesizer::publishSnapshot() noexcept {
   m_snapshotSocket.send(&snapshotEndUpdate, sizeof(MDPMarketUpdate));
 
   m_snapshotSocket.sendAndRecv();
-  m_logger.log("%:% %() % Published snapshot with % updates\n", __FILE__,
-               __LINE__, __FUNCTION__, common::getCurrentTimeStr(&m_timeStr),
-               snapshotSize);
+  m_logger.logInfo("%:% %() % Published snapshot with % updates\n", __FILE__,
+                   __LINE__, __FUNCTION__,
+                   common::getCurrentTimeStr(&m_timeStr), snapshotSize);
 }
 
 } // namespace exchange
