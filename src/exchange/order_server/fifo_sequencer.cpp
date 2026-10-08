@@ -16,17 +16,16 @@ void FIFOSequencer::sequenceAndPublish() noexcept {
     return;
   }
 
-  m_logger->logInfo("%:% %() % Sequencing and publishing % pending requests\n",
-                    __FILE__, __LINE__, __FUNCTION__,
-                    common::getCurrentTimeStr(&m_timeStr), m_pendingSize);
+  m_logger->logInfo("%:% %() Sequencing and publishing % pending requests\n",
+                    __FILE__, __LINE__, __FUNCTION__, m_pendingSize);
 
   std::sort(m_pendingRequests.begin(),
             m_pendingRequests.begin() + m_pendingSize);
 
   for (size_t i = 0; i < m_pendingSize; ++i) {
     const auto &req = m_pendingRequests[i];
-    m_logger->logData("%:% %() % Writing request: %\n", __FILE__, __LINE__,
-                      __FUNCTION__, common::getCurrentTimeStr(&m_timeStr),
+    m_logger->logData("%:% %() Writing request: %\n", __FILE__, __LINE__,
+                      __FUNCTION__,
                       req.m_clientRequest.toString());
     auto *nextToWrite = m_clientRequestQueue->getNextToWriteTo();
     *nextToWrite = req.m_clientRequest;

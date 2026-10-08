@@ -54,15 +54,14 @@ struct MEMarketUpdate {
 
   std::string toString() const {
     std::stringstream ss;
-    ss << "MEMarketUpdate"
-       << " ["
-       << " type:" << marketUpdateTypeToString(m_type)
-       << " ticker:" << tickerIdToString(m_tickerId)
-       << " oid:" << orderIdToString(m_marketOrderId)
-       << " side:" << sideToString(m_side)
-       << " price:" << priceToString(m_price)
-       << " qty:" << quantityToString(m_qty)
-       << " priority:" << priorityToString(m_priority) << "]";
+    ss << "MEMarketUpdate [ "
+       << "type: " << marketUpdateTypeToString(m_type)
+       << ", ticker: " << tickerIdToString(m_tickerId)
+       << ", oid: " << orderIdToString(m_marketOrderId)
+       << ", side: " << sideToString(m_side)
+       << ", price: " << priceToString(m_price)
+       << ", qty: " << quantityToString(m_qty)
+       << ", priority: " << priorityToString(m_priority) << " ]";
     return ss.str();
   }
 };
@@ -73,9 +72,9 @@ struct MDPMarketUpdate {
 
   std::string toString() const {
     std::stringstream ss;
-    ss << "MDPMarketUpdate"
-       << " ["
-       << " seqNum:" << m_seqNum << " " << m_marketUpdate.toString() << "]";
+    ss << "MDPMarketUpdate [ "
+       << "seqNum: " << m_seqNum
+       << ", marketUpdate: " << m_marketUpdate.toString() << " ]";
     return ss.str();
   }
 };

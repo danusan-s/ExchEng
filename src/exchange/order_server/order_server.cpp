@@ -42,9 +42,8 @@ void OrderServer::stop() {
 }
 
 void OrderServer::run() noexcept {
-  m_logger.logInfo("%:% %() % OrderServer started on iface:% port:%\n",
-                   __FILE__, __LINE__, __FUNCTION__,
-                   common::getCurrentTimeStr(&m_timeStr), m_iface, m_port);
+  m_logger.logInfo("%:% %() OrderServer started on iface:% port:%\n",
+                   __FILE__, __LINE__, __FUNCTION__, m_iface, m_port);
 
   while (m_running.load(std::memory_order_relaxed)) {
     m_tcpServer.poll();
@@ -56,8 +55,8 @@ void OrderServer::run() noexcept {
       auto &nextOutSeqNum = m_cidNextOutSeqNum[clientResponse->m_clientId];
 
       m_logger.logData(
-          "%:% %() % Sending response to ClientId: % seqNum: % %\n", __FILE__,
-          __LINE__, __FUNCTION__, common::getCurrentTimeStr(&m_timeStr),
+          "%:% %() Sending response to ClientId: % seqNum: % %\n", __FILE__,
+          __LINE__, __FUNCTION__,
           clientResponse->m_clientId, nextOutSeqNum,
           clientResponse->toString().c_str());
 
@@ -74,14 +73,13 @@ void OrderServer::run() noexcept {
     }
   }
 
-  m_logger.logInfo("%:% %() % OrderServer stopped\n", __FILE__, __LINE__,
-                   __FUNCTION__, common::getCurrentTimeStr(&m_timeStr));
+  m_logger.logInfo("%:% %() OrderServer stopped\n", __FILE__, __LINE__,
+                   __FUNCTION__);
 }
 
 void OrderServer::recvCallback(TCPSocket *socket, Nanos rxTime) noexcept {
-  m_logger.logData("%:% %() % Received data from socket % at time %\n",
-                   __FILE__, __LINE__, __FUNCTION__,
-                   common::getCurrentTimeStr(&m_timeStr), socket->m_socketFd,
+  m_logger.logData("%:% %() Received data from socket % at time %\n",
+                   __FILE__, __LINE__, __FUNCTION__, socket->m_socketFd,
                    rxTime);
 
   if (socket->m_nextReceiveValidIndex > sizeof(OMClientRequest)) {
@@ -91,9 +89,8 @@ void OrderServer::recvCallback(TCPSocket *socket, Nanos rxTime) noexcept {
       const auto *request = reinterpret_cast<const OMClientRequest *>(
           socket->m_inboundData.data() + i);
 
-      m_logger.logData("%:% %() % Processing request from socket %: %\n",
+      m_logger.logData("%:% %() Processing request from socket %: %\n",
                        __FILE__, __LINE__, __FUNCTION__,
-                       common::getCurrentTimeStr(&m_timeStr),
                        socket->m_socketFd, request->toString());
 
       // First request from client
@@ -103,10 +100,9 @@ void OrderServer::recvCallback(TCPSocket *socket, Nanos rxTime) noexcept {
       // Mismatch in client socket
       if (m_cidSockets[request->m_request.m_clientId] != socket) {
         m_logger.logError(
-            "%:% %() % Received request from ClientId: % on different "
+            "%:% %() Received request from ClientId: % on different "
             "socket: % expected: %\n",
             __FILE__, __LINE__, __FUNCTION__,
-            common::getCurrentTimeStr(&m_timeStr),
             request->m_request.m_clientId, socket->m_socketFd,
             m_cidSockets[request->m_request.m_clientId]->m_socketFd);
         continue;
@@ -116,10 +112,9 @@ void OrderServer::recvCallback(TCPSocket *socket, Nanos rxTime) noexcept {
       // Check for sequence number mismatch
       auto &nextInSeqNum = m_cidNextInSeqNum[request->m_request.m_clientId];
       if (request->m_seqNum != nextInSeqNum) {
-        m_logger.logError("%:% %() % Received request from ClientId: % with "
+        m_logger.logError("%:% %() Received request from ClientId: % with "
                           "seqNum: % expected seqNum: %\n",
                           __FILE__, __LINE__, __FUNCTION__,
-                          common::getCurrentTimeStr(&m_timeStr),
                           request->m_request.m_clientId, request->m_seqNum,
                           nextInSeqNum);
         continue;
@@ -134,9 +129,8 @@ void OrderServer::recvCallback(TCPSocket *socket, Nanos rxTime) noexcept {
 }
 
 void OrderServer::recvFinishedCallback() noexcept {
-  m_logger.logData("%:% %() % Finished processing received data\n", __FILE__,
-                   __LINE__, __FUNCTION__,
-                   common::getCurrentTimeStr(&m_timeStr));
+  m_logger.logData("%:% %() Finished processing received data\n", __FILE__,
+                   __LINE__, __FUNCTION__);
   m_fifoSequencer.sequenceAndPublish();
 }
 

@@ -33,7 +33,6 @@ private:
   MDPMarketUpdateQueue *m_snapshotUpdateQueue = nullptr;
 
   Logger m_logger;
-  std::string m_timeStr;
 
   std::atomic<bool> m_running = {true};
 

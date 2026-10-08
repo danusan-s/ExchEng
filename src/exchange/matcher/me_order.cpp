@@ -6,7 +6,7 @@ namespace exchange {
 
 std::string MEOrder::toString() const {
   std::ostringstream oss;
-  oss << "MEOrder ["
+  oss << "MEOrder [ "
       << "tickerId: " << tickerIdToString(m_tickerId)
       << ", clientId: " << clientIdToString(m_clientId)
       << ", clientOrderId: " << orderIdToString(m_clientOrderId)
@@ -20,14 +20,14 @@ std::string MEOrder::toString() const {
       << ", prevOrder: "
       << (orderIdToString(m_prevOrder ? m_prevOrder->m_marketOrderId
                                       : INVALID_ORDER_ID))
-      << "]";
+      << " ]";
 
   return oss.str();
 }
 
 std::string MEOrdersAtPrice::toString() const {
   std::ostringstream oss;
-  oss << "MEOrdersAtPrice ["
+  oss << "MEOrdersAtPrice [ "
       << "side: " << sideToString(m_side)
       << ", price: " << priceToString(m_price) << ", firstOrder: "
       << (orderIdToString(m_firstOrder ? m_firstOrder->m_marketOrderId
@@ -36,7 +36,7 @@ std::string MEOrdersAtPrice::toString() const {
       << (priceToString(m_nextEntry ? m_nextEntry->m_price : INVALID_PRICE))
       << ", prevEntry: "
       << (priceToString(m_prevEntry ? m_prevEntry->m_price : INVALID_PRICE))
-      << "]";
+      << " ]";
 
   return oss.str();
 }

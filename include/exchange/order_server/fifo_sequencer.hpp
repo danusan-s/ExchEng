@@ -28,7 +28,6 @@ public:
 
 private:
   ClientRequestQueue *m_clientRequestQueue = nullptr;
-  std::string m_timeStr;
   Logger *m_logger = nullptr;
 
   struct RecvTimeClientRequest {

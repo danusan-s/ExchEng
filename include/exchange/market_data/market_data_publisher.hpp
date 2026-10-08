@@ -32,7 +32,6 @@ private:
   size_t m_nextOutSeqNum = 1;
   MarketUpdateQueue *m_outgoingUpdateQueue = nullptr;
 
-  std::string m_timeStr;
   Logger m_logger;
 
   MulticastSocket m_incrementalUpdateSocket;

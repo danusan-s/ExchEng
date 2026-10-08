@@ -47,7 +47,7 @@ struct MEClientResponse {
 
   std::string toString() const {
     std::ostringstream oss;
-    oss << "MEClientResponse ["
+    oss << "MEClientResponse [ "
         << "type: " << clientResponseTypeToString(m_type)
         << ", clientId: " << clientIdToString(m_clientId)
         << ", tickerId: " << tickerIdToString(m_tickerId)
@@ -55,7 +55,7 @@ struct MEClientResponse {
         << ", marketOrderId: " << orderIdToString(m_marketOrderId)
         << ", side: " << sideToString(m_side)
         << ", price: " << priceToString(m_price)
-        << ", quantity: " << quantityToString(m_execQty) << "]";
+        << ", quantity: " << quantityToString(m_execQty) << " ]";
     return oss.str();
   }
 };
@@ -66,8 +66,9 @@ struct OMClientResponse {
 
   std::string toString() const {
     std::ostringstream oss;
-    oss << "OMClientResponse ["
-        << "seqNum: " << m_seqNum << " " << m_response.toString() << "]";
+    oss << "OMClientResponse [ "
+        << "seqNum: " << m_seqNum << ", response: " << m_response.toString()
+        << " ]";
     return oss.str();
   }
 };

@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <ctime>
+#include <iomanip>
 
 namespace common {
 
@@ -20,11 +21,19 @@ inline auto getCurrentNanos() noexcept {
 }
 
 inline auto &getCurrentTimeStr(std::string *time_str) {
-  const auto time =
-      std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-  time_str->assign(ctime(&time));
-  if (!time_str->empty())
-    time_str->at(time_str->length() - 1) = '\0';
+
+  std::ostringstream oss;
+  auto now = std::chrono::system_clock::now();
+  const auto time = std::chrono::system_clock::to_time_t(now);
+
+  auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                now.time_since_epoch()) %
+            1000;
+
+  oss << "[ " << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S")
+      << '.' << std::setfill('0') << std::setw(3) << ms.count() << " ] ";
+  time_str->assign(oss.str());
+
   return *time_str;
 }
 

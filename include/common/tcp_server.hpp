@@ -41,7 +41,6 @@ public:
   /// read and dispatched this round.
   std::function<void()> m_recvFinishedCallback = nullptr;
 
-  std::string m_timeStr;
   Logger &m_logger;
 };
 

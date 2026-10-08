@@ -44,22 +44,22 @@ void MatchingEngine::stop() {
 }
 
 void MatchingEngine::run() noexcept {
-  m_logger.logInfo("%:% %() % MatchingEngine Started\n", __FILE__, __LINE__,
-                   __FUNCTION__, common::getCurrentTimeStr(&m_timeStr));
+  m_logger.logInfo("%:% %() MatchingEngine Started\n", __FILE__, __LINE__,
+                   __FUNCTION__);
 
   while (m_running.load(std::memory_order_relaxed)) {
     const auto meClientRequest = m_clientRequestQueue->getNextToRead();
     if (meClientRequest) [[likely]] {
-      m_logger.logData("%:% %() % Processing %\n", __FILE__, __LINE__,
-                       __FUNCTION__, common::getCurrentTimeStr(&m_timeStr),
+      m_logger.logData("%:% %() Processing %\n", __FILE__, __LINE__,
+                       __FUNCTION__,
                        meClientRequest->toString());
       processClientRequest(meClientRequest);
       m_clientRequestQueue->updateReadIndex();
     }
   }
 
-  m_logger.logInfo("%:% %() % MatchingEngine Stopped\n", __FILE__, __LINE__,
-                   __FUNCTION__, common::getCurrentTimeStr(&m_timeStr));
+  m_logger.logInfo("%:% %() MatchingEngine Stopped\n", __FILE__, __LINE__,
+                   __FUNCTION__);
 }
 
 void MatchingEngine::processClientRequest(
@@ -77,9 +77,8 @@ void MatchingEngine::processClientRequest(
                         meClientRequest->m_tickerId);
     } break;
     default:
-      m_logger.logError("%:% %() % Unknown request type: %\n", __FILE__,
+      m_logger.logError("%:% %() Unknown request type: %\n", __FILE__,
                        __LINE__, __FUNCTION__,
-                       common::getCurrentTimeStr(&m_timeStr),
                        clientRequestTypeToString(meClientRequest->m_type));
       break;
   }
@@ -87,8 +86,7 @@ void MatchingEngine::processClientRequest(
 
 void MatchingEngine::sendClientResponse(
     const MEClientResponse *meClientResponse) noexcept {
-  m_logger.logData("%:% %() % Sending %\n", __FILE__, __LINE__, __FUNCTION__,
-                   common::getCurrentTimeStr(&m_timeStr),
+  m_logger.logData("%:% %() Sending %\n", __FILE__, __LINE__, __FUNCTION__,
                    meClientResponse->toString());
   auto nextWriteIndex = m_clientResponseQueue->getNextToWriteTo();
   *nextWriteIndex = std::move(*meClientResponse);
@@ -97,8 +95,7 @@ void MatchingEngine::sendClientResponse(
 
 void MatchingEngine::sendMarketUpdate(
     const MEMarketUpdate *meMarketUpdate) noexcept {
-  m_logger.logData("%:% %() % Sending %\n", __FILE__, __LINE__, __FUNCTION__,
-                   common::getCurrentTimeStr(&m_timeStr),
+  m_logger.logData("%:% %() Sending %\n", __FILE__, __LINE__, __FUNCTION__,
                    meMarketUpdate->toString());
   auto nextWriteIndex = m_marketUpdateQueue->getNextToWriteTo();
   *nextWriteIndex = std::move(*meMarketUpdate);

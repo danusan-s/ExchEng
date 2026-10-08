@@ -43,7 +43,6 @@ struct MulticastSocket {
   /// Function wrapper for the method to call when data is read.
   std::function<void(MulticastSocket *s)> m_recvCallback = nullptr;
 
-  std::string m_timeStr;
   Logger &m_logger;
 };
 

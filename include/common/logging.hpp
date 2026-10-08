@@ -71,26 +71,33 @@ public:
   }
 
   template <typename... A> void logData(const char *s, A... args) noexcept {
+    common::getCurrentTimeStr(&m_timeStr);
+    pushValue(m_timeStr);
     pushValue("\033[36m[DATA]\033[0m ");
     log(s, args...);
   }
 
   template <typename... A> void logInfo(const char *s, A... args) noexcept {
+    common::getCurrentTimeStr(&m_timeStr);
+    pushValue(m_timeStr);
     pushValue("\033[32m[INFO]\033[0m ");
     log(s, args...);
   }
 
   template <typename... A> void logWarn(const char *s, A... args) noexcept {
+    common::getCurrentTimeStr(&m_timeStr);
+    pushValue(m_timeStr);
     pushValue("\033[33m[WARNING]\033[0m ");
     log(s, args...);
   }
 
   template <typename... A> void logError(const char *s, A... args) noexcept {
+    common::getCurrentTimeStr(&m_timeStr);
+    pushValue(m_timeStr);
     pushValue("\033[31m[ERROR]\033[0m ");
     log(s, args...);
   }
 
-  // Deleted default, copy & move constructors and assignment-operators.
   Logger() = delete;
   Logger(const Logger &) = delete;
   Logger(const Logger &&) = delete;
@@ -236,6 +243,8 @@ private:
 private:
   const std::string m_fileName;
   std::ofstream m_file;
+
+  std::string m_timeStr;
 
   LFQueue<LogElement> m_queue;
   std::atomic<bool> m_running = {true};

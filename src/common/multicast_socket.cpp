@@ -30,8 +30,8 @@ auto MulticastSocket::sendAndRecv() noexcept -> bool {
            MCAST_BUFFER_SIZE - m_nextReceiveValidIndex, MSG_DONTWAIT);
   if (n_rcv > 0) {
     m_nextReceiveValidIndex += n_rcv;
-    m_logger.logData("%:% %() % read socket:% len:%\n", __FILE__, __LINE__,
-                     __FUNCTION__, common::getCurrentTimeStr(&m_timeStr),
+    m_logger.logData("%:% %() read socket:% len:%\n", __FILE__, __LINE__,
+                     __FUNCTION__,
                      m_socketFd, m_nextReceiveValidIndex);
     m_recvCallback(this);
   }
@@ -41,8 +41,8 @@ auto MulticastSocket::sendAndRecv() noexcept -> bool {
     ssize_t n = ::send(m_socketFd, m_outboundData.data(), m_nextSendValidIndex,
                        MSG_DONTWAIT | MSG_NOSIGNAL);
 
-    m_logger.logData("%:% %() % send socket:% len:%\n", __FILE__, __LINE__,
-                     __FUNCTION__, common::getCurrentTimeStr(&m_timeStr),
+    m_logger.logData("%:% %() send socket:% len:%\n", __FILE__, __LINE__,
+                     __FUNCTION__,
                      m_socketFd, n);
   }
   m_nextSendValidIndex = 0;

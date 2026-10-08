@@ -41,14 +41,14 @@ struct MEClientRequest {
 
   std::string toString() const {
     std::ostringstream oss;
-    oss << "MEClientRequest ["
+    oss << "MEClientRequest [ "
         << "type: " << clientRequestTypeToString(m_type)
         << ", clientId: " << clientIdToString(m_clientId)
         << ", tickerId: " << tickerIdToString(m_tickerId)
         << ", orderId: " << orderIdToString(m_orderId)
         << ", side: " << sideToString(m_side)
         << ", price: " << priceToString(m_price)
-        << ", quantity: " << quantityToString(m_quantity) << "]";
+        << ", quantity: " << quantityToString(m_quantity) << " ]";
     return oss.str();
   }
 };
@@ -59,8 +59,9 @@ struct OMClientRequest {
 
   std::string toString() const {
     std::ostringstream oss;
-    oss << "OMClientRequest ["
-        << "seqNum: " << m_seqNum << " " << m_request.toString() << "]";
+    oss << "OMClientRequest [ "
+        << "seqNum: " << m_seqNum << ", request: " << m_request.toString()
+        << " ]";
     return oss.str();
   }
 };

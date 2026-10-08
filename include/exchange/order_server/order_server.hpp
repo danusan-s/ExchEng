@@ -36,7 +36,6 @@ private:
 
   ClientResponseQueue *m_clientResponseQueue = nullptr;
 
-  std::string m_timeStr;
   Logger m_logger;
 
   TCPServer m_tcpServer;

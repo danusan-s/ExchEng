@@ -30,9 +30,10 @@ struct SocketCfg {
 
   auto toString() const {
     std::stringstream ss;
-    ss << "SocketCfg[ip:" << m_ip << " iface:" << m_iface << " port:" << m_port
-       << " is_udp:" << m_isUDP << " is_listening:" << m_isListening
-       << " needs_SO_timestamp:" << m_needsSOTimestamp << "]";
+    ss << "SocketCfg [ ip: " << m_ip << ", iface: " << m_iface
+       << ", port: " << m_port << ", is_udp: " << m_isUDP
+       << ", is_listening: " << m_isListening
+       << ", needs_SO_timestamp: " << m_needsSOTimestamp << " ]";
 
     return ss.str();
   }
@@ -96,12 +97,9 @@ inline bool join(int fd, const std::string &ip) {
 /// listen for connections on the specified interface and IP:port information.
 [[nodiscard]] inline int createSocket(Logger &logger,
                                       const SocketCfg &socketCfg) {
-  std::string timeStr;
-
   const auto ip =
       socketCfg.m_ip.empty() ? getIfaceIP(socketCfg.m_iface) : socketCfg.m_ip;
-  logger.logData("%:% %() % cfg:%\n", __FILE__, __LINE__, __FUNCTION__,
-                 common::getCurrentTimeStr(&timeStr), socketCfg.toString());
+  logger.logData("%:% %() cfg:%\n", __FILE__, __LINE__, __FUNCTION__, socketCfg.toString());
 
   const int inputFlags = (socketCfg.m_isListening ? AI_PASSIVE : 0) |
                          (AI_NUMERICHOST | AI_NUMERICSERV);

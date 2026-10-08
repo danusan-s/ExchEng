@@ -49,7 +49,6 @@ struct TCPSocket {
   /// Function wrapper to callback when there is data to be processed.
   std::function<void(TCPSocket *s, Nanos rxTime)> m_recvCallback = nullptr;
 
-  std::string m_timeStr;
   Logger &m_logger;
 };
 
