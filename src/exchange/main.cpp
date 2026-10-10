@@ -29,12 +29,12 @@ void signalHandler(int) {
   }
 
   if (g_matchingEngine) {
-    g_logger->logInfo("%:% %() Destroying MatchingEngine\n", __FILE__,
-                      __LINE__, __FUNCTION__);
+    g_logger->logInfo("%:% %() Destroying MatchingEngine\n", __FILE__, __LINE__,
+                      __FUNCTION__);
     delete g_matchingEngine;
     g_matchingEngine = nullptr;
-    g_logger->logInfo("%:% %() Destroyed MatchingEngine\n", __FILE__,
-                      __LINE__, __FUNCTION__);
+    g_logger->logInfo("%:% %() Destroyed MatchingEngine\n", __FILE__, __LINE__,
+                      __FUNCTION__);
   }
 
   if (g_marketDataPublisher) {
@@ -62,64 +62,60 @@ int main() {
 
   const std::string iface = "lo";
   const int orderServerPort = 5000;
-  const int incrementalUpdatePort = 5001;
-  const int snapshotPort = 5002;
+  const std::string incrementalUpdateIp = "239.0.1.1";
+  const std::string snapshotIp = "239.0.1.2";
+  const int incrementalUpdatePort = 6001;
+  const int snapshotPort = 6002;
 
   g_logger->logInfo("%:% %() Starting matching engine\n", __FILE__, __LINE__,
                     __FUNCTION__);
 
   g_logger->logInfo("%:% %() Config iface:% orderServerPort:% "
+                    "incrementalUpdateIp:% snapshotIp:% "
                     "incrementalUpdatePort:% snapshotPort:%\n",
-                    __FILE__, __LINE__, __FUNCTION__, iface,
-                    orderServerPort, incrementalUpdatePort, snapshotPort);
+                    __FILE__, __LINE__, __FUNCTION__, iface, orderServerPort,
+                    incrementalUpdateIp, snapshotIp, incrementalUpdatePort,
+                    snapshotPort);
 
   g_logger->logInfo(
       "%:% %() Constants ME_MAX_TICKERS:% ME_MAX_NUM_CLIENTS:% "
       "ME_MAX_CLIENT_UPDATES:% ME_MAX_MARKET_UPDATES:% ME_MAX_ORDER_IDS:% "
       "ME_MAX_PRICE_LEVELS:% MAX_ME_PENDING_REQUESTS:% LOG_QUEUE_SIZE:%\n",
-      __FILE__, __LINE__, __FUNCTION__,
-      common::ME_MAX_TICKERS, common::ME_MAX_NUM_CLIENTS,
-      common::ME_MAX_CLIENT_UPDATES, common::ME_MAX_MARKET_UPDATES,
-      common::ME_MAX_ORDER_IDS, common::ME_MAX_PRICE_LEVELS,
-      exchange::MAX_ME_PENDING_REQUESTS, common::LOG_QUEUE_SIZE);
+      __FILE__, __LINE__, __FUNCTION__, common::ME_MAX_TICKERS,
+      common::ME_MAX_NUM_CLIENTS, common::ME_MAX_CLIENT_UPDATES,
+      common::ME_MAX_MARKET_UPDATES, common::ME_MAX_ORDER_IDS,
+      common::ME_MAX_PRICE_LEVELS, exchange::MAX_ME_PENDING_REQUESTS,
+      common::LOG_QUEUE_SIZE);
 
   signal(SIGINT, signalHandler);
 
   exchange::ClientRequestQueue clientRequestQueue(ME_MAX_CLIENT_UPDATES);
-  g_logger->logInfo("%:% %() Created ClientRequestQueue capacity:%\n",
-                    __FILE__, __LINE__, __FUNCTION__,
-                    ME_MAX_CLIENT_UPDATES);
+  g_logger->logInfo("%:% %() Created ClientRequestQueue capacity:%\n", __FILE__,
+                    __LINE__, __FUNCTION__, ME_MAX_CLIENT_UPDATES);
 
   exchange::ClientResponseQueue clientResponseQueue(ME_MAX_CLIENT_UPDATES);
   g_logger->logInfo("%:% %() Created ClientResponseQueue capacity:%\n",
-                    __FILE__, __LINE__, __FUNCTION__,
-                    ME_MAX_CLIENT_UPDATES);
+                    __FILE__, __LINE__, __FUNCTION__, ME_MAX_CLIENT_UPDATES);
 
   exchange::MarketUpdateQueue marketUpdateQueue(ME_MAX_MARKET_UPDATES);
-  g_logger->logInfo("%:% %() Created MarketUpdateQueue capacity:%\n",
-                    __FILE__, __LINE__, __FUNCTION__,
-                    ME_MAX_MARKET_UPDATES);
+  g_logger->logInfo("%:% %() Created MarketUpdateQueue capacity:%\n", __FILE__,
+                    __LINE__, __FUNCTION__, ME_MAX_MARKET_UPDATES);
 
   g_matchingEngine = new exchange::MatchingEngine(
       &clientRequestQueue, &clientResponseQueue, &marketUpdateQueue);
-  g_logger->logInfo("%:% %() Created MatchingEngine\n", __FILE__, __LINE__,
-                    __FUNCTION__);
   g_matchingEngine->start();
   g_logger->logInfo("%:% %() Starting MatchingEngine thread\n", __FILE__,
                     __LINE__, __FUNCTION__);
 
   g_orderServer = new exchange::OrderServer(
       &clientRequestQueue, &clientResponseQueue, iface, orderServerPort);
-  g_logger->logInfo("%:% %() Created OrderServer\n", __FILE__, __LINE__,
-                    __FUNCTION__);
   g_orderServer->start();
-  g_logger->logInfo("%:% %() Starting OrderServer thread\n", __FILE__,
-                    __LINE__, __FUNCTION__);
+  g_logger->logInfo("%:% %() Starting OrderServer thread\n", __FILE__, __LINE__,
+                    __FUNCTION__);
 
   g_marketDataPublisher = new exchange::MarketDataPublisher(
-      &marketUpdateQueue, iface, "", snapshotPort, "", incrementalUpdatePort);
-  g_logger->logInfo("%:% %() Created MarketDataPublisher\n", __FILE__,
-                    __LINE__, __FUNCTION__);
+      &marketUpdateQueue, iface, snapshotIp, snapshotPort, incrementalUpdateIp,
+      incrementalUpdatePort);
   g_marketDataPublisher->start();
   g_logger->logInfo("%:% %() Starting MarketDataPublisher thread\n", __FILE__,
                     __LINE__, __FUNCTION__);

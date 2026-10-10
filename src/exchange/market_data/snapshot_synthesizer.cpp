@@ -32,16 +32,15 @@ void SnapshotSynthesizer::stop() {
 }
 
 void SnapshotSynthesizer::run() noexcept {
-  m_logger.logInfo("%:% %() SnapshotSynthesizer started\n", __FILE__,
-                   __LINE__, __FUNCTION__);
+  m_logger.logInfo("%:% %() SnapshotSynthesizer started\n", __FILE__, __LINE__,
+                   __FUNCTION__);
 
   while (m_running.load(std::memory_order_relaxed)) {
     for (auto snapshotUpdate = m_snapshotUpdateQueue->getNextToRead();
          m_snapshotUpdateQueue->size() && snapshotUpdate;
          snapshotUpdate = m_snapshotUpdateQueue->getNextToRead()) {
       m_logger.logData("%:% %() Processing %\n", __FILE__, __LINE__,
-                       __FUNCTION__,
-                       snapshotUpdate->toString());
+                       __FUNCTION__, snapshotUpdate->toString());
       addToSnapshot(snapshotUpdate);
       m_snapshotUpdateQueue->updateReadIndex();
     }
@@ -52,8 +51,8 @@ void SnapshotSynthesizer::run() noexcept {
     }
   }
 
-  m_logger.logInfo("%:% %() SnapshotSynthesizer stopped\n", __FILE__,
-                   __LINE__, __FUNCTION__);
+  m_logger.logInfo("%:% %() SnapshotSynthesizer stopped\n", __FILE__, __LINE__,
+                   __FUNCTION__);
 }
 
 void SnapshotSynthesizer::addToSnapshot(
@@ -111,6 +110,8 @@ void SnapshotSynthesizer::addToSnapshot(
 
 void SnapshotSynthesizer::publishSnapshot() noexcept {
   size_t snapshotSize = 0;
+  // Order Id reused in snapshot start and end to indicate what incremental seq
+  // num the snapshot is based on.
   const MDPMarketUpdate snapshotStartUpdate{
       snapshotSize++,
       {MarketUpdateType::SNAPSHOT_START, m_lastIncrementalSeqNum,

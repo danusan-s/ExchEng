@@ -11,6 +11,9 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 set(EXCHANGE_SOURCE_FILES
+  src/common/tcp_server.cpp
+  src/common/tcp_socket.cpp
+  src/common/multicast_socket.cpp
   src/exchange/matcher/matching_engine.cpp
   src/exchange/matcher/me_order.cpp
   src/exchange/matcher/me_order_book.cpp
@@ -18,9 +21,6 @@ set(EXCHANGE_SOURCE_FILES
   src/exchange/order_server/fifo_sequencer.cpp
   src/exchange/market_data/market_data_publisher.cpp
   src/exchange/market_data/snapshot_synthesizer.cpp
-  src/common/tcp_server.cpp
-  src/common/tcp_socket.cpp
-  src/common/multicast_socket.cpp
   src/exchange/main.cpp
 )
 
@@ -38,18 +38,51 @@ target_compile_options(ExchEng PRIVATE
     $<$<CONFIG:Release>:-flto>
     $<$<CONFIG:Release>:-O3>
     $<$<CONFIG:Release>:-march=native>
+    -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Woverloaded-virtual -Werror
 )
 target_link_options(ExchEng PRIVATE
     $<$<CONFIG:Debug>:-fsanitize=address>
     $<$<CONFIG:Release>:-flto>
 )
 
-target_compile_options(ExchEng PRIVATE
-    -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Woverloaded-virtual -Werror
-)
-
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
   target_compile_options(ExchEng PRIVATE
+    "-ffile-prefix-map=${CMAKE_CURRENT_SOURCE_DIR}/="
+  )
+endif()
+
+set(TRADING_SOURCE_FILES
+  src/common/tcp_server.cpp
+  src/common/tcp_socket.cpp
+  src/common/multicast_socket.cpp
+  src/trading/market_data/market_data_consumer.cpp
+  src/trading/main.cpp
+)
+
+add_executable(TradingClient ${TRADING_SOURCE_FILES})
+
+target_include_directories(TradingClient
+  PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+target_compile_options(TradingClient PRIVATE
+    $<$<CONFIG:Debug>:-g>
+    $<$<CONFIG:Debug>:-fsanitize=address>
+    $<$<CONFIG:Release>:-ffast-math>
+    $<$<CONFIG:Release>:-flto>
+    $<$<CONFIG:Release>:-O3>
+    $<$<CONFIG:Release>:-march=native>
+    -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Woverloaded-virtual -Werror
+)
+target_link_options(TradingClient PRIVATE
+    $<$<CONFIG:Debug>:-fsanitize=address>
+    $<$<CONFIG:Release>:-flto>
+)
+
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+  target_compile_options(TradingClient PRIVATE
     "-ffile-prefix-map=${CMAKE_CURRENT_SOURCE_DIR}/="
   )
 endif()

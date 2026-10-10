@@ -32,8 +32,11 @@ import time
 
 HOST = "127.0.0.1"
 ORDER_PORT = 5000
-INCREMENTAL_PORT = 5001
-SNAPSHOT_PORT = 5002
+IFACE_IP = "127.0.0.1"  # "lo" address: multicast is pinned here, not wlan0
+INCREMENTAL_IP = "239.0.1.1"
+INCREMENTAL_PORT = 6001
+SNAPSHOT_IP = "239.0.1.2"
+SNAPSHOT_PORT = 6002
 
 REQUEST_FMT = "<QBIIQBQI"
 RESPONSE_FMT = "<QBIIQQBQII"
@@ -110,22 +113,30 @@ def describe_market_update(buf):
     )
 
 
-def feed_listener(name, port, stop_event, duration):
-    """Bind a market-data port and print whatever lands on it.
+def feed_listener(name, group_ip, port, stop_event, duration):
+    """Join a multicast group on lo and print whatever lands on it.
 
-    main.cpp passes an empty multicast IP, so createSocket() falls back to the
-    "lo" interface address: these are plain UDP datagrams to 127.0.0.1, not a
-    multicast group, and binding the port is enough to receive them.
+    Mirrors src/exchange/main.cpp + src/trading/main.cpp:
+    incremental 239.0.1.1:6001, snapshot 239.0.1.2:6002, iface "lo".
+    Membership is pinned to 127.0.0.1: with INADDR_ANY the kernel would use
+    the wlan0 path, where this box drops multicast.
     """
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     try:
-        sock.bind((HOST, port))
+        sock.bind(("", port))
     except OSError as exc:
-        log(f"{name}: bind {HOST}:{port} failed: {exc}")
+        log(f"{name}: bind :{port} failed: {exc}")
+        return
+    try:
+        mreq = socket.inet_aton(group_ip) + socket.inet_aton(IFACE_IP)
+        sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+    except OSError as exc:
+        log(f"{name}: join {group_ip} on {IFACE_IP} failed: {exc}")
+        sock.close()
         return
     sock.settimeout(0.5)
-    log(f"{name}: listening on {HOST}:{port} for {duration:.0f}s")
+    log(f"{name}: listening on {group_ip}:{port} for {duration:.0f}s")
 
     packets = 0
     while not stop_event.is_set():
@@ -149,13 +160,15 @@ def feed_listener(name, port, stop_event, duration):
     log(f"{name}: done, {packets} packet(s)")
 
 
-def poke_udp_port(name, port, payload):
-    """Fire a datagram at a feed port and see whether anything answers."""
+def poke_udp_port(name, group_ip, port, payload):
+    """Fire a datagram at a feed group (via lo) and see if anything answers."""
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF,
+                    socket.inet_aton(IFACE_IP))
     sock.settimeout(1.0)
     try:
-        sock.sendto(payload, (HOST, port))
-        log(f"{name}: sent {len(payload)} bytes to {HOST}:{port}")
+        sock.sendto(payload, (group_ip, port))
+        log(f"{name}: sent {len(payload)} bytes to {group_ip}:{port}")
         try:
             data, peer = sock.recvfrom(65536)
             log(
@@ -297,12 +310,12 @@ def main():
     listeners = [
         threading.Thread(
             target=feed_listener,
-            args=("snapshot", SNAPSHOT_PORT, stop, args.listen),
+            args=("snapshot", SNAPSHOT_IP, SNAPSHOT_PORT, stop, args.listen),
             daemon=True,
         ),
         threading.Thread(
             target=feed_listener,
-            args=("incremental", INCREMENTAL_PORT, stop, args.listen),
+            args=("incremental", INCREMENTAL_IP, INCREMENTAL_PORT, stop, args.listen),
             daemon=True,
         ),
     ]
@@ -315,8 +328,8 @@ def main():
 
     if args.poke_feeds:
         print("-" * 72)
-        poke_udp_port("snapshot", SNAPSHOT_PORT, os.urandom(MARKET_UPDATE_SIZE))
-        poke_udp_port("incremental", INCREMENTAL_PORT, os.urandom(MARKET_UPDATE_SIZE))
+        poke_udp_port("snapshot", SNAPSHOT_IP, SNAPSHOT_PORT, os.urandom(MARKET_UPDATE_SIZE))
+        poke_udp_port("incremental", INCREMENTAL_IP, INCREMENTAL_PORT, os.urandom(MARKET_UPDATE_SIZE))
 
     print("-" * 72)
     time.sleep(max(0.0, args.listen))

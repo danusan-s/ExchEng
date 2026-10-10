@@ -85,11 +85,42 @@ inline bool setSOTimestamp(int fd) {
                      reinterpret_cast<void *>(&one), sizeof(one)) != -1);
 }
 
+/// Resolve an interface name ("lo") or numeric address ("127.0.0.1") to a
+/// numeric interface address. Returns "" when unresolvable.
+inline std::string resolveIfaceIP(const std::string &iface) {
+  if (iface.empty())
+    return "";
+  in_addr addr{};
+  if (inet_pton(AF_INET, iface.c_str(), &addr) == 1)
+    return iface;
+  return getIfaceIP(iface);
+}
+
 /// Add / Join membership / subscription to the multicast stream specified and
-/// on the interface specified.
-inline bool join(int fd, const std::string &ip) {
-  const ip_mreq mreq{{inet_addr(ip.c_str())}, {htonl(INADDR_ANY)}};
+/// on the interface specified. ifaceIp is a numeric interface address
+/// (e.g. 127.0.0.1 for "lo"); empty falls back to INADDR_ANY.
+inline bool join(int fd, const std::string &groupIp,
+                 const std::string &ifaceIp = "") {
+  ip_mreq mreq{};
+  mreq.imr_multiaddr.s_addr = inet_addr(groupIp.c_str());
+  if (!ifaceIp.empty() &&
+      inet_pton(AF_INET, ifaceIp.c_str(), &mreq.imr_interface) == 1) {
+    // mreq.imr_interface set from ifaceIp.
+  } else {
+    mreq.imr_interface.s_addr = htonl(INADDR_ANY);
+  }
   return (setsockopt(fd, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) !=
+          -1);
+}
+
+/// Pin outbound multicast to a numeric interface address (e.g. 127.0.0.1).
+/// Without this, 239.x datagrams egress via the system multicast-default
+/// interface (wlan0 on this box) and never reach lo subscribers.
+inline bool setMulticastIf(int fd, const std::string &ifaceIp) {
+  in_addr addr{};
+  if (inet_pton(AF_INET, ifaceIp.c_str(), &addr) != 1)
+    return false;
+  return (setsockopt(fd, IPPROTO_IP, IP_MULTICAST_IF, &addr, sizeof(addr)) !=
           -1);
 }
 
@@ -99,7 +130,8 @@ inline bool join(int fd, const std::string &ip) {
                                       const SocketCfg &socketCfg) {
   const auto ip =
       socketCfg.m_ip.empty() ? getIfaceIP(socketCfg.m_iface) : socketCfg.m_ip;
-  logger.logData("%:% %() cfg:%\n", __FILE__, __LINE__, __FUNCTION__, socketCfg.toString());
+  logger.logData("%:% %() cfg:%\n", __FILE__, __LINE__, __FUNCTION__,
+                 socketCfg.toString());
 
   const int inputFlags = (socketCfg.m_isListening ? AI_PASSIVE : 0) |
                          (AI_NUMERICHOST | AI_NUMERICSERV);
@@ -116,7 +148,7 @@ inline bool join(int fd, const std::string &ip) {
   const auto rc = getaddrinfo(
       ip.c_str(), std::to_string(socketCfg.m_port).c_str(), &hints, &result);
   ASSERT(!rc, "getaddrinfo() failed. error:" + std::string(gai_strerror(rc)) +
-                  "errno:" + strerror(errno));
+                  " errno:" + strerror(errno));
 
   int socketFd = -1;
   int one = 1;
@@ -134,6 +166,27 @@ inline bool join(int fd, const std::string &ip) {
     if (!socketCfg.m_isUDP) {
       ASSERT(disableNagle(socketFd),
              "disableNagle() failed. errno:" + std::string(strerror(errno)));
+    }
+
+    // Pin multicast to the configured interface so 239.x egresses via "lo"
+    // instead of the system multicast-default (wlan0 on this box).
+    if (socketCfg.m_isUDP) {
+      unsigned char ttl = 1;
+      ASSERT(setsockopt(socketFd, IPPROTO_IP, IP_MULTICAST_TTL, &ttl,
+                        sizeof(ttl)) == 0,
+             "setsockopt() IP_MULTICAST_TTL failed. errno:" +
+                 std::string(strerror(errno)));
+      unsigned char loop = 1;
+      ASSERT(setsockopt(socketFd, IPPROTO_IP, IP_MULTICAST_LOOP, &loop,
+                        sizeof(loop)) == 0,
+             "setsockopt() IP_MULTICAST_LOOP failed. errno:" +
+                 std::string(strerror(errno)));
+      const auto multicastIf = resolveIfaceIP(socketCfg.m_iface);
+      if (!multicastIf.empty()) {
+        ASSERT(setMulticastIf(socketFd, multicastIf),
+               "setMulticastIf() failed for iface:" + socketCfg.m_iface +
+                   " errno:" + std::string(strerror(errno)));
+      }
     }
 
     // If not listening socket, then connect to dest addr

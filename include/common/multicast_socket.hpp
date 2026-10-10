@@ -43,6 +43,9 @@ struct MulticastSocket {
   /// Function wrapper for the method to call when data is read.
   std::function<void(MulticastSocket *s)> m_recvCallback = nullptr;
 
+  /// Configured interface (e.g. "lo"), used to pin group membership.
+  std::string m_iface;
+
   Logger &m_logger;
 };
 

@@ -6,6 +6,7 @@ namespace common {
 /// Does not join the multicast stream yet.
 auto MulticastSocket::init(const std::string &ip, const std::string &iface,
                            int port, bool is_listening) -> int {
+  m_iface = iface;
   const SocketCfg socket_cfg{ip, iface, port, true, is_listening, false};
   m_socketFd = createSocket(m_logger, socket_cfg);
   return m_socketFd;
@@ -13,7 +14,14 @@ auto MulticastSocket::init(const std::string &ip, const std::string &iface,
 
 /// Add / Join membership / subscription to a multicast stream.
 auto MulticastSocket::join(const std::string &ip) -> bool {
-  return common::join(m_socketFd, ip);
+  const auto ifaceIp = common::resolveIfaceIP(m_iface);
+  const bool ok = common::join(m_socketFd, ip, ifaceIp);
+  if (!ok) {
+    m_logger.logError("%:% %() join() failed group:% iface:%(%) errno:%\n",
+                      __FILE__, __LINE__, __FUNCTION__, ip, m_iface, ifaceIp,
+                      strerror(errno));
+  }
+  return ok;
 }
 
 /// Remove / Leave membership / subscription to a multicast stream.
