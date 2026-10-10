@@ -60,7 +60,7 @@ inline std::string priorityToString(Priority priority) {
   return std::to_string(priority);
 }
 
-enum class Side : uint8_t { BUY = 0, SELL = 1, INVALID = 2 };
+enum class Side : uint8_t { BUY = 0, SELL = 1, INVALID = 2, MAX = 2 };
 inline std::string sideToString(Side side) {
   switch (side) {
     case Side::BUY:
@@ -71,6 +71,15 @@ inline std::string sideToString(Side side) {
       return "INVALID_SIDE";
   }
   return "UNKNOWN";
+}
+
+inline constexpr size_t sideToIndex(Side side) {
+  return static_cast<size_t>(side);
+}
+
+// Used for computing positions and PnL. BUY is +1, SELL is -1, INVALID is 0.
+inline constexpr int sideToValue(Side side) {
+  return (side == Side::BUY) ? 1 : (side == Side::SELL) ? -1 : 0;
 }
 
 } // namespace common

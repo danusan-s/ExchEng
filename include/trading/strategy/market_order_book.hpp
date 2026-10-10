@@ -36,6 +36,7 @@ public:
   void removeOrdersAtPriceFromBook(MarketOrdersAtPrice *ordersAtPrice) noexcept;
 
   void updateBBO(bool bidChanged, bool askChanged) noexcept;
+  const BBO *getBBO() const noexcept;
 
   size_t priceToIndex(Price price) const noexcept {
     return static_cast<size_t>(price / ME_MAX_PRICE_LEVELS);

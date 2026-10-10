@@ -124,6 +124,10 @@ void MarketOrderBook::updateBBO(bool bidChanged, bool askChanged) noexcept {
   }
 }
 
+const BBO *MarketOrderBook::getBBO() const noexcept {
+  return &m_bbo;
+}
+
 void MarketOrderBook::addOrderToBook(MarketOrder *newOrder) noexcept {
   const auto ordersAtPrice = getOrdersAtPrice(newOrder->m_price);
   if (!ordersAtPrice) {
