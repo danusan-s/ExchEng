@@ -7,6 +7,7 @@
 #include "trading/strategy/config.hpp"
 #include "trading/strategy/market_order_book.hpp"
 #include "trading/strategy/risk_manager.hpp"
+#include <functional>
 
 namespace trading {
 
@@ -19,6 +20,17 @@ public:
 
   void
   sendClientRequest(const exchange::MEClientRequest *clientRequest) noexcept;
+
+  void algoOnTradeUpdate(std::function<void(const exchange::MEMarketUpdate *,
+                                            const MarketOrderBook *)>
+                             callback) noexcept;
+
+  void algoOnOrderBookUpdate(
+      std::function<void(TickerId, Price, Side, const MarketOrderBook *)>
+          callback) noexcept;
+
+  void algoOnOrderUpdate(std::function<void(const exchange::MEClientResponse *)>
+                             callback) noexcept;
 
 private:
 };
