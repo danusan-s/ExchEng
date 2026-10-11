@@ -51,7 +51,7 @@ void MarketOrderBook::onMarketUpdate(
       removeOrderFromBook(order);
     } break;
     case exchange::MarketUpdateType::TRADE: {
-      m_tradeEngine->onTrade(marketUpdate, this);
+      m_tradeEngine->onTradeUpdate(marketUpdate, this);
       return;
     } break;
     case exchange::MarketUpdateType::CLEAR: {
@@ -92,7 +92,8 @@ void MarketOrderBook::onMarketUpdate(
   updateBBO(bidChanged, askChanged);
 
   m_tradeEngine->onOrderBookUpdate(marketUpdate->m_tickerId,
-                                   marketUpdate->m_price, marketUpdate->m_side);
+                                   marketUpdate->m_price, marketUpdate->m_side,
+                                   this);
 }
 
 void MarketOrderBook::updateBBO(bool bidChanged, bool askChanged) noexcept {

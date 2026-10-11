@@ -1,5 +1,6 @@
 #include "trading/strategy/liquidity_taker.hpp"
 #include "common/types.hpp"
+#include "trading/strategy/trade_engine.hpp"
 
 namespace trading {
 

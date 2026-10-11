@@ -34,3 +34,15 @@ debug:
 # ===== Rebuild (clean + build) =====
 .PHONY: rebuild
 rebuild: clean build
+
+# ===== Run exchange =====
+.PHONY: run_exchange
+run_exchange:
+	./build/ExchEng
+
+
+# ===== Run clients =====
+.PHONY: run_clients
+run_clients:
+	./scripts/run_clients.sh
+

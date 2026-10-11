@@ -10,18 +10,10 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type" FORCE)
 endif()
 
-set(EXCHANGE_SOURCE_FILES
-  src/common/tcp_server.cpp
-  src/common/tcp_socket.cpp
-  src/common/multicast_socket.cpp
-  src/exchange/matcher/matching_engine.cpp
-  src/exchange/matcher/me_order.cpp
-  src/exchange/matcher/me_order_book.cpp
-  src/exchange/order_server/order_server.cpp
-  src/exchange/order_server/fifo_sequencer.cpp
-  src/exchange/market_data/market_data_publisher.cpp
-  src/exchange/market_data/snapshot_synthesizer.cpp
-  src/exchange/main.cpp
+
+file(GLOB_RECURSE EXCHANGE_SOURCE_FILES CONFIGURE_DEPENDS
+  src/common/*.cpp
+  src/exchange/*.cpp
 )
 
 add_executable(ExchEng ${EXCHANGE_SOURCE_FILES})
@@ -51,12 +43,9 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
   )
 endif()
 
-set(TRADING_SOURCE_FILES
-  src/common/tcp_server.cpp
-  src/common/tcp_socket.cpp
-  src/common/multicast_socket.cpp
-  src/trading/market_data/market_data_consumer.cpp
-  src/trading/main.cpp
+file(GLOB_RECURSE TRADING_SOURCE_FILES CONFIGURE_DEPENDS
+  src/common/*.cpp
+  src/trading/*.cpp
 )
 
 add_executable(TradingClient ${TRADING_SOURCE_FILES})

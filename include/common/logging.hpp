@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <fstream>
 #include <string>
 
@@ -45,9 +46,13 @@ struct LogElement {
 class Logger final {
 public:
   explicit Logger(const std::string &file_name)
-      : m_fileName(file_name), m_queue(LOG_QUEUE_SIZE) {
-    m_file.open(file_name);
-    ASSERT(m_file.is_open(), "Could not open log file:" + file_name);
+      : m_fileName("logs/" + file_name), m_queue(LOG_QUEUE_SIZE) {
+    std::error_code ec;
+    std::filesystem::create_directories(
+        std::filesystem::path(m_fileName).parent_path(), ec);
+    ASSERT(!ec, "Could not create logs directory: " + ec.message());
+    m_file.open(m_fileName);
+    ASSERT(m_file.is_open(), "Could not open log file:" + m_fileName);
     m_loggerThread = createAndStartThread(-1, "Common/Logger " + m_fileName,
                                           [this]() { flushQueue(); });
     ASSERT(m_loggerThread != nullptr, "Failed to start Logger thread.");

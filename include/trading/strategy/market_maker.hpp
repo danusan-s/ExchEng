@@ -4,7 +4,6 @@
 #include "trading/strategy/config.hpp"
 #include "trading/strategy/feature_engine.hpp"
 #include "trading/strategy/order_manager.hpp"
-#include "trading/strategy/trade_engine.hpp"
 
 using namespace common;
 
