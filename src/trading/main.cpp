@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
   const int snapshotPort = 6002;
 
   g_marketDataConsumer = new MarketDataConsumer(
-      1, marketUpdateQueue, iface, snapshotIp, snapshotPort,
+      clientId, marketUpdateQueue, iface, snapshotIp, snapshotPort,
       incrementalUpdateIp, incrementalUpdatePort);
   g_marketDataConsumer->start();
 

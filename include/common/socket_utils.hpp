@@ -191,7 +191,8 @@ inline bool setMulticastIf(int fd, const std::string &ifaceIp) {
 
     // If not listening socket, then connect to dest addr
     if (!socketCfg.m_isListening) {
-      ASSERT(connect(socketFd, rp->ai_addr, rp->ai_addrlen) != -1,
+      int retCode = connect(socketFd, rp->ai_addr, rp->ai_addrlen);
+      ASSERT(retCode == 0 || (retCode == -1 && errno == EINPROGRESS),
              "connect() failed. errno:" + std::string(strerror(errno)));
     }
 
