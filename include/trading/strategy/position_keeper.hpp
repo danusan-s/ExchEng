@@ -40,7 +40,7 @@ public:
   PositionKeeper(PositionKeeper &&) = delete;
   PositionKeeper &operator=(PositionKeeper &&) = delete;
 
-  PositionInfo &getPositionInfo(TickerId tickerId) noexcept;
+  const PositionInfo &getPositionInfo(TickerId tickerId) const;
   std::string toString() const;
   void addFill(const exchange::MEClientResponse *clientResponse) noexcept;
   void updateBBO(TickerId tickerId, const BBO *bbo) noexcept;

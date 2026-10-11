@@ -1,6 +1,7 @@
 #include "trading/strategy/market_order_book.hpp"
 #include "common/constants.hpp"
 #include "trading/strategy/market_order.hpp"
+#include "trading/strategy/trade_engine.hpp"
 
 namespace trading {
 

@@ -3,6 +3,8 @@
 #include "common/constants.hpp"
 #include "common/types.hpp"
 
+#include <sstream>
+
 using namespace common;
 
 namespace trading {
@@ -25,7 +27,16 @@ struct MarketOrder {
         m_priority(priority), m_nextOrder(nextOrder), m_prevOrder(prevOrder) {
   }
 
-  std::string toString() const;
+  std::string toString() const {
+    std::stringstream ss;
+    ss << "MarketOrder [ "
+       << "orderId: " << orderIdToString(m_orderId)
+       << ", side: " << sideToString(m_side)
+       << ", price: " << priceToString(m_price)
+       << ", quantity: " << quantityToString(m_qty)
+       << ", priority: " << priorityToString(m_priority) << " ]";
+    return ss.str();
+  }
 };
 
 using OrderHashMap = std::array<MarketOrder *, ME_MAX_ORDER_IDS>;
@@ -48,7 +59,17 @@ struct MarketOrdersAtPrice {
         m_nextEntry(nextEntry), m_prevEntry(prevEntry) {
   }
 
-  std::string toString() const;
+  std::string toString() const {
+    std::stringstream ss;
+    ss << "MaretOrdersAtPrice [ "
+       << "side: " << sideToString(m_side)
+       << ", price: " << priceToString(m_price)
+       << ", firstOrder: " << (m_firstOrder ? m_firstOrder->toString() : "null")
+       << ", nextEntry: " << (m_nextEntry ? m_nextEntry->toString() : "null")
+       << ", prevEntry: " << (m_prevEntry ? m_prevEntry->toString() : "null")
+       << " ]";
+    return ss.str();
+  }
 };
 
 using OrdersAtPriceHashMap =
@@ -61,7 +82,14 @@ struct BBO {
   Quantity m_bidQty = INVALID_QUANTITY;
   Quantity m_askQty = INVALID_QUANTITY;
 
-  std::string toString() const;
+  std::string toString() const {
+    std::stringstream ss;
+    ss << "BBO [ " << quantityToString(m_bidPrice) << "@"
+       << priceToString(m_bidPrice) << "X" << priceToString(m_askPrice) << "@"
+       << quantityToString(m_askPrice) << " ]";
+
+    return ss.str();
+  }
 };
 
 } // namespace trading

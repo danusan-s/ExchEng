@@ -99,7 +99,7 @@ void PositionInfo::updateBBO(const BBO *bbo, Logger *logger) noexcept {
 PositionKeeper::PositionKeeper(common::Logger *logger) : m_logger(logger) {
 }
 
-PositionInfo &PositionKeeper::getPositionInfo(TickerId tickerId) noexcept {
+const PositionInfo &PositionKeeper::getPositionInfo(TickerId tickerId) const {
   return m_positions.at(tickerId);
 }
 
