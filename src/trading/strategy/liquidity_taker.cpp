@@ -10,20 +10,21 @@ LiquidityTaker::LiquidityTaker(TradeEngine *tradeEngine,
                                Logger *logger)
     : m_featureEngine(featureEngine), m_orderManager(orderManager),
       m_logger(logger), m_tickerConfig(tickerConfig) {
-  tradeEngine->algoOnOrderBookUpdate(
-      [this](auto tickerId, auto price, auto side, auto orderBook) {
-        this->onOrderBookUpdate(tickerId, price, side, orderBook);
-      });
-  tradeEngine->algoOnTradeUpdate([this](auto marketUpdate, auto orderBook) {
+  tradeEngine->m_algoOnOrderBookUpdate = [this](auto tickerId, auto price,
+                                                auto side, auto orderBook) {
+    this->onOrderBookUpdate(tickerId, price, side, orderBook);
+  };
+  tradeEngine->m_algoOnTradeUpdate = [this](auto marketUpdate, auto orderBook) {
     this->onTradeUpdate(marketUpdate, orderBook);
-  });
-  tradeEngine->algoOnOrderUpdate(
-      [this](auto clientResponse) { this->onOrderUpdate(clientResponse); });
+  };
+  tradeEngine->m_algoOnOrderUpdate = [this](auto clientResponse) {
+    this->onOrderUpdate(clientResponse);
+  };
 }
 
-void LiquidityTaker::onOrderBookUpdate(
-    TickerId tickerId, Price price, Side side,
-    const MarketOrderBook *orderBook) noexcept {
+void LiquidityTaker::onOrderBookUpdate(TickerId tickerId, Price price,
+                                       Side side,
+                                       const MarketOrderBook *) noexcept {
   m_logger->logInfo(
       "%:% %() Received order book update for tickerId=% price=% side=%\n",
       __FILE__, __LINE__, __FUNCTION__, tickerIdToString(tickerId),

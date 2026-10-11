@@ -1,7 +1,6 @@
 #pragma once
 
 #include "common/logging.hpp"
-#include "exchange/order_server/client_request.hpp"
 #include "exchange/order_server/client_response.hpp"
 #include "trading/strategy/om_order.hpp"
 #include "trading/strategy/risk_manager.hpp"

@@ -3,8 +3,9 @@
 
 namespace trading {
 
-void FeatureEngine::onOrderBookUpdate(TickerId tickerId, Price price, Side side,
-                                      MarketOrderBook *orderBook) noexcept {
+void FeatureEngine::onOrderBookUpdate(
+    TickerId tickerId, Price price, Side side,
+    const MarketOrderBook *orderBook) noexcept {
   const auto bbo = orderBook->getBBO();
   if (bbo->m_bidPrice != INVALID_PRICE && bbo->m_askPrice != INVALID_PRICE)
       [[likely]] {
@@ -22,7 +23,7 @@ void FeatureEngine::onOrderBookUpdate(TickerId tickerId, Price price, Side side,
 }
 
 void FeatureEngine::onTradeUpdate(const exchange::MEMarketUpdate *marketUpdate,
-                                  MarketOrderBook *orderBook) noexcept {
+                                  const MarketOrderBook *orderBook) noexcept {
   const auto bbo = orderBook->getBBO();
   if (bbo->m_bidPrice != INVALID_PRICE && bbo->m_askPrice != INVALID_PRICE)
       [[likely]] {

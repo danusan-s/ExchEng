@@ -17,6 +17,13 @@ RiskManager::RiskManager(const PositionKeeper *positionKeeper,
 
 RiskCheckResult RiskManager::checkPreTradeRisk(TickerId tickerId, Side side,
                                                Quantity qty) const noexcept {
+  const auto &riskInfo = m_tickerRiskInfo.at(tickerId);
+  const auto result = riskInfo.checkPreTradeRisk(side, qty);
+  m_logger->logInfo("%:% %() tickerId=% side=% qty=% riskCheckResult=%\n",
+                    __FILE__, __LINE__, __FUNCTION__,
+                    tickerIdToString(tickerId), sideToString(side),
+                    quantityToString(qty), riskCheckResultToString(result));
+  return result;
 }
 
 } // namespace trading

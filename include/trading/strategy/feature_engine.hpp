@@ -24,10 +24,10 @@ public:
   }
 
   void onOrderBookUpdate(TickerId tickerId, Price price, Side side,
-                         MarketOrderBook *orderBook) noexcept;
+                         const MarketOrderBook *orderBook) noexcept;
 
   void onTradeUpdate(const exchange::MEMarketUpdate *marketUpdate,
-                     MarketOrderBook *orderBook) noexcept;
+                     const MarketOrderBook *orderBook) noexcept;
 
 private:
   Logger *m_logger = nullptr;

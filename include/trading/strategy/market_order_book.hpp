@@ -66,4 +66,6 @@ private:
   Logger *m_logger = nullptr;
 };
 
+using MarketOrderBookMap = std::array<MarketOrderBook *, ME_MAX_TICKERS>;
+
 } // namespace trading

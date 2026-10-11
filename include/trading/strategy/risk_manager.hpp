@@ -3,14 +3,11 @@
 #include "common/types.hpp"
 #include "trading/strategy/config.hpp"
 #include "trading/strategy/position_keeper.hpp"
-#include "trading/strategy/trade_engine.hpp"
 #include <sstream>
 
 using namespace common;
 
 namespace trading {
-
-class OrderManager;
 
 enum class RiskCheckResult : uint8_t {
   INVALID = 0,
