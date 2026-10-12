@@ -1,4 +1,5 @@
 #include "exchange/matcher/me_order_book.hpp"
+#include "common/constants.hpp"
 #include "common/types.hpp"
 #include "exchange/market_data/market_update.hpp"
 #include "exchange/matcher/matching_engine.hpp"
@@ -14,7 +15,7 @@ OrderId MEOrderBook::getNextMarketOrderId() noexcept {
 }
 
 size_t MEOrderBook::priceToIndex(Price price) const noexcept {
-  return static_cast<size_t>(price);
+  return static_cast<size_t>(price % ME_MAX_PRICE_LEVELS);
 }
 
 MEOrdersAtPrice *MEOrderBook::getOrdersAtPrice(Price price) noexcept {
@@ -26,6 +27,10 @@ MEOrderBook::MEOrderBook(TickerId ticker_id, Logger *logger,
     : m_tickerId(ticker_id), m_matchingEngine(matching_engine),
       m_ordersAtPricePool(ME_MAX_PRICE_LEVELS), m_ordersPool(ME_MAX_ORDER_IDS),
       m_logger(logger) {
+  for (auto &clientOrders : m_cidOidToOrder) {
+    clientOrders.fill(nullptr);
+  }
+  m_priceOrdersAtPrice.fill(nullptr);
 }
 
 MEOrderBook::~MEOrderBook() {

@@ -39,7 +39,7 @@ public:
   const BBO *getBBO() const noexcept;
 
   size_t priceToIndex(Price price) const noexcept {
-    return static_cast<size_t>(price / ME_MAX_PRICE_LEVELS);
+    return static_cast<size_t>(price % ME_MAX_PRICE_LEVELS);
   }
 
   MarketOrdersAtPrice *getOrdersAtPrice(Price price) const noexcept {
@@ -51,13 +51,13 @@ private:
 
   TradeEngine *m_tradeEngine = nullptr;
 
-  OrderHashMap m_orderHashMap;
+  OrderHashMap m_orderHashMap{};
 
   MemPool<MarketOrdersAtPrice> m_ordersAtPricePool;
   MarketOrdersAtPrice *m_asksByPrice = nullptr;
   MarketOrdersAtPrice *m_bidsByPrice = nullptr;
 
-  OrdersAtPriceHashMap m_priceOrdersAtPrice;
+  OrdersAtPriceHashMap m_priceOrdersAtPrice{};
 
   MemPool<MarketOrder> m_orderPool;
 

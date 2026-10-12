@@ -55,6 +55,17 @@ public:
     return m_clientId;
   }
 
+  // Testability: expose position state for verification.
+  const PositionInfo &getPositionInfo(TickerId tickerId) const noexcept {
+    return m_positionKeeper.getPositionInfo(tickerId);
+  }
+
+  // Testability: expose a ticker book so tests can drive market data through
+  // the engine's real run-path objects without extra ownership hazards.
+  MarketOrderBook *getOrderBook(TickerId tickerId) const noexcept {
+    return m_tickerOrderBooks.at(tickerId);
+  }
+
   void initLastEventTime() noexcept {
     m_lastEventTime = common::getCurrentNanos();
   }

@@ -2,6 +2,8 @@
 #include "common/types.hpp"
 #include "trading/strategy/trade_engine.hpp"
 
+#include <cmath>
+
 namespace trading {
 
 LiquidityTaker::LiquidityTaker(TradeEngine *tradeEngine,
@@ -40,8 +42,11 @@ void LiquidityTaker::onTradeUpdate(const exchange::MEMarketUpdate *marketUpdate,
   const auto bbo = orderBook->getBBO();
   const auto aggQtyRatio = m_featureEngine->getAggresiveTradeQtyRatio();
 
+  // NOTE: isnan (not != INVALID_FEATURE): NaN != NaN is always true, so a
+  // plain != can never detect the uninitialized ratio. Behavior is unchanged
+  // today (NaN >= threshold is false either way), but this states the intent.
   if (bbo->m_bidPrice != INVALID_PRICE && bbo->m_askPrice != INVALID_PRICE &&
-      aggQtyRatio != INVALID_FEATURE) [[likely]] {
+      !std::isnan(aggQtyRatio)) [[likely]] {
     m_logger->logInfo("%:% %() % aggresiveTradeQtyRatio: %\n", __FILE__,
                       __LINE__, __FUNCTION__, bbo->toString(), aggQtyRatio);
 
@@ -64,7 +69,7 @@ void LiquidityTaker::onOrderUpdate(
     const exchange::MEClientResponse *clientResponse) noexcept {
   m_logger->logInfo("%:% %() Received order update %\n", __FILE__, __LINE__,
                     __FUNCTION__, clientResponse->toString());
-  // Liquidity taker does not react to order updates
+  m_orderManager->onOrderUpdate(clientResponse);
 }
 
 } // namespace trading

@@ -29,6 +29,15 @@ public:
   void addToSnapshot(const MDPMarketUpdate *snapshotUpdate) noexcept;
   void publishSnapshot() noexcept;
 
+  // Testability: expose snapshot state without breaking encapsulation.
+  size_t getLastSeqNum() const noexcept {
+    return m_lastIncrementalSeqNum;
+  }
+  const MEMarketUpdate *getSnapshotOrder(TickerId tickerId,
+                                         OrderId orderId) const noexcept {
+    return m_tickerOrders.at(tickerId).at(orderId);
+  }
+
 private:
   MDPMarketUpdateQueue *m_snapshotUpdateQueue = nullptr;
 

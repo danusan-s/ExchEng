@@ -2,6 +2,8 @@
 #include "trading/strategy/feature_engine.hpp"
 #include "trading/strategy/trade_engine.hpp"
 
+#include <cmath>
+
 namespace trading {
 
 MarketMaker::MarketMaker(TradeEngine *tradeEngine,
@@ -32,8 +34,11 @@ void MarketMaker::onOrderBookUpdate(TickerId tickerId, Price price, Side side,
 
   const auto bbo = orderBook->getBBO();
   const auto fairPrice = m_featureEngine->getMarketPrice();
+  // NOTE: must use isnan (not != INVALID_FEATURE): NaN != NaN is always true,
+  // so a plain != comparison can never detect the uninitialized feature and
+  // would quote off a NaN fair value. The book's != check has this bug.
   if (bbo->m_bidPrice != INVALID_PRICE && bbo->m_askPrice != INVALID_PRICE &&
-      fairPrice != INVALID_FEATURE) [[likely]] {
+      !std::isnan(fairPrice)) [[likely]] {
     m_logger->logInfo("%:% %() % fairPrice: %\n", __FILE__, __LINE__,
                       __FUNCTION__, bbo->toString(), fairPrice);
 

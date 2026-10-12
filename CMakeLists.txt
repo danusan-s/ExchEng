@@ -89,4 +89,5 @@ FetchContent_MakeAvailable(googletest)
 
 # Test executables - one per test file
 enable_testing()
+add_subdirectory(tests)
 

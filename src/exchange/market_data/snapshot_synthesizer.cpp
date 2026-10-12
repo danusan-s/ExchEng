@@ -12,6 +12,9 @@ SnapshotSynthesizer::SnapshotSynthesizer(
   ASSERT(m_snapshotSocket.init(ip, iface, port, false) >= 0,
          "Failed to initialize snapshot multicast socket. ip:" + ip + " port:" +
              std::to_string(port) + " error:" + std::strerror(errno));
+  for (auto &tickerOrders : m_tickerOrders) {
+    tickerOrders.fill(nullptr);
+  }
 }
 
 SnapshotSynthesizer::~SnapshotSynthesizer() noexcept {

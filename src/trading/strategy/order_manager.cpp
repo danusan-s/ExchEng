@@ -54,7 +54,10 @@ void OrderManager::moveOrder(OMOrder *order, TickerId tickerId, Price price,
                              Side side, Quantity qty) noexcept {
   switch (order->m_state) {
     case OMOrderState::LIVE: {
-      if (order->m_price != price || order->m_qty != qty) {
+      // Book logic: only a price change triggers cancel-replace. A qty-only
+      // difference is ignored so partially filled orders ride their reduced
+      // leaves instead of churning a cancel + new on every fill.
+      if (order->m_price != price) {
         cancelOrder(order);
       }
     } break;

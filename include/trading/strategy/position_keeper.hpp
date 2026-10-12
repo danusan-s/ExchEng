@@ -20,7 +20,7 @@ struct PositionInfo {
   // Total PnL (realized + unrealized)
   double m_totalPnL = 0.0;
   // Volume Weighted Average Price (VWAP) for open positions
-  std::array<double, sideToIndex(Side::MAX) + 1> m_openVWAP;
+  std::array<double, sideToIndex(Side::MAX) + 1> m_openVWAP{};
   // Total qty that has been executed
   Quantity m_volume = 0;
   const BBO *m_bbo = nullptr;
