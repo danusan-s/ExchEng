@@ -171,7 +171,9 @@ int main(int argc, char **argv) {
       prices.at(i) = (rand() % 100) + 100;
     }
     g_tradeEngine->initLastEventTime();
-    for (size_t i = 0; i < 10000; ++i) {
+    for (size_t i = 0; i < 1000; ++i) {
+      g_logger->logInfo("%:% %() RANDOM order flow iteration:%\n", __FILE__,
+                        __LINE__, __FUNCTION__, i);
       const TickerId tickerId = rand() % ME_MAX_TICKERS;
       const Price price = prices.at(tickerId) + (rand() % 10) + 1;
       const Quantity qty = (rand() % 100) + 1;

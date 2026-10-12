@@ -35,6 +35,16 @@ debug:
 .PHONY: rebuild
 rebuild: clean build
 
+
+# ===== Test =====
+.PHONY: test
+test:
+	@mkdir -p $(BUILD_DIR)
+	@cd $(BUILD_DIR) && $(CMAKE) .. \
+		-DCMAKE_BUILD_TYPE=$(BUILD_TYPE)
+	@$(CMAKE) --build $(BUILD_DIR) -j --target build-tests
+	@cd $(BUILD_DIR) && $(CTEST) --output-on-failure
+
 # ===== Run exchange =====
 .PHONY: run_exchange
 run_exchange:
