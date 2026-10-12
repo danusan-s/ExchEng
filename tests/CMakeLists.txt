@@ -56,4 +56,12 @@ foreach(TEST_FILE ${TEST_FILES})
   )
   target_link_libraries(${TEST_NAME} PRIVATE gtest_main)
   add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
+  # Logger resolves "logs/..." relative to the process working directory and
+  # truncates on open, and several log names are hardcoded in source ctors
+  # (matching_engine.log, snapshot_synthesizer.log, trading_engine_<id>.log).
+  # Run tests in an isolated CWD so `ctest` never touches the real ./logs/.
+  set_tests_properties(${TEST_NAME} PROPERTIES
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/test-logs)
 endforeach()
+
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/test-logs)
