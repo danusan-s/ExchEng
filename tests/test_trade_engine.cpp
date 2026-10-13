@@ -132,11 +132,11 @@ TEST_F(TradeEngineTest, DefaultAlgoCallbacksAreSafe) {
 // Verifies a MAKER engine wires algo callbacks (book update posts quotes).
 TEST_F(TradeEngineTest, MakerEnginePostsQuotesOnBookUpdate) {
   TradeEngineConfigMap makerCfg{};
-  makerCfg[0].m_clip = 10;
-  makerCfg[0].m_threshold = 500.0;
-  makerCfg[0].m_riskConfig.m_maxOrderSize = 100;
-  makerCfg[0].m_riskConfig.m_maxPosition = 1000;
-  makerCfg[0].m_riskConfig.m_maxLoss = -1e9;
+  makerCfg.at(0).m_clip = 10;
+  makerCfg.at(0).m_threshold = 500.0;
+  makerCfg.at(0).m_riskConfig.m_maxOrderSize = 100;
+  makerCfg.at(0).m_riskConfig.m_maxPosition = 1000;
+  makerCfg.at(0).m_riskConfig.m_maxLoss = -1e9;
   ClientRequestImplQueue rq(1024);
   ClientResponseImplQueue rs(1024);
   MarketUpdateImplQueue md(1024);

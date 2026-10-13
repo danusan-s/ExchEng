@@ -19,7 +19,7 @@ public:
   }
 
   T *getNextToWriteTo() noexcept {
-    return &m_store[m_nextWriteIndex];
+    return &m_store.at(m_nextWriteIndex);
   }
 
   void updateWriteIndex() noexcept {
@@ -28,7 +28,7 @@ public:
   }
 
   const T *getNextToRead() const noexcept {
-    return (size() ? &m_store[m_nextReadIndex] : nullptr);
+    return (size() ? &m_store.at(m_nextReadIndex) : nullptr);
   }
 
   void updateReadIndex() noexcept {

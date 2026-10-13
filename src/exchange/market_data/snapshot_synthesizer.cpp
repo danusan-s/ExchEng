@@ -63,7 +63,7 @@ void SnapshotSynthesizer::run() noexcept {
 void SnapshotSynthesizer::addToSnapshot(
     const MarketUpdate *snapshotUpdate) noexcept {
   const auto &marketUpdate = snapshotUpdate->m_marketUpdate;
-  auto &tickerOrders = m_tickerOrders[marketUpdate.m_tickerId];
+  auto &tickerOrders = m_tickerOrders.at(marketUpdate.m_tickerId);
   switch (marketUpdate.m_type) {
     case MarketUpdateType::ADD: {
       auto order = tickerOrders.at(marketUpdate.m_marketOrderId);

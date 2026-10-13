@@ -27,9 +27,9 @@ protected:
   void SetUp() override {
     keeper = std::make_unique<PositionKeeper>(logger.get());
     TradeEngineConfigMap cfg{};
-    cfg[0].m_riskConfig.m_maxOrderSize = 100;
-    cfg[0].m_riskConfig.m_maxPosition = 200;
-    cfg[0].m_riskConfig.m_maxLoss = -1000.0;
+    cfg.at(0).m_riskConfig.m_maxOrderSize = 100;
+    cfg.at(0).m_riskConfig.m_maxPosition = 200;
+    cfg.at(0).m_riskConfig.m_maxLoss = -1000.0;
     risk = std::make_unique<RiskManager>(keeper.get(), cfg, logger.get());
   }
 

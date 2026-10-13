@@ -53,14 +53,15 @@ void OrderServer::run() noexcept {
     for (auto clientResponse = m_clientResponseQueue->getNextToRead();
          clientResponse != nullptr;
          clientResponse = m_clientResponseQueue->getNextToRead()) {
-      auto &nextOutSeqNum = m_cidNextOutSeqNum[clientResponse->m_clientId];
+      auto &nextOutSeqNum =
+          m_cidNextOutSeqNum.at(clientResponse->m_clientId);
 
       m_logger.logData("%:% %() Sending response to ClientId: % seqNum: % %\n",
                        __FILE__, __LINE__, __FUNCTION__,
                        clientResponse->m_clientId, nextOutSeqNum,
                        clientResponse->toString().c_str());
 
-      auto socket = m_cidSockets[clientResponse->m_clientId];
+      auto socket = m_cidSockets.at(clientResponse->m_clientId);
 
       ASSERT(socket != nullptr, "No socket found for ClientId: " +
                                     std::to_string(clientResponse->m_clientId));
@@ -93,23 +94,24 @@ void OrderServer::recvCallback(TCPSocket *socket, Nanos rxTime) noexcept {
                        request->toString());
 
       // First request from client
-      if (m_cidSockets[request->m_request.m_clientId] == nullptr) [[unlikely]] {
-        m_cidSockets[request->m_request.m_clientId] = socket;
+      if (m_cidSockets.at(request->m_request.m_clientId) == nullptr) [[unlikely]] {
+        m_cidSockets.at(request->m_request.m_clientId) = socket;
       }
       // Mismatch in client socket
-      if (m_cidSockets[request->m_request.m_clientId] != socket) {
+      if (m_cidSockets.at(request->m_request.m_clientId) != socket) {
         m_logger.logError(
             "%:% %() Received request from ClientId: % on different "
             "socket: % expected: %\n",
             __FILE__, __LINE__, __FUNCTION__, request->m_request.m_clientId,
             socket->m_socketFd,
-            m_cidSockets[request->m_request.m_clientId]->m_socketFd);
+            m_cidSockets.at(request->m_request.m_clientId)->m_socketFd);
         continue;
       }
 
       // TODO: REJECT_BACK for mismatched seqNum, so client can retry
       // Check for sequence number mismatch
-      auto &nextInSeqNum = m_cidNextInSeqNum[request->m_request.m_clientId];
+      auto &nextInSeqNum =
+          m_cidNextInSeqNum.at(request->m_request.m_clientId);
       if (request->m_seqNum != nextInSeqNum) {
         m_logger.logError("%:% %() Received request from ClientId: % with "
                           "seqNum: % expected seqNum: %\n",

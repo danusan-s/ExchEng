@@ -43,11 +43,11 @@ protected:
     while (outReq->size())
       outReq->updateReadIndex();
     cfg = TradeEngineConfigMap{};
-    cfg[0].m_clip = 10;
-    cfg[0].m_threshold = 0.5;
-    cfg[0].m_riskConfig.m_maxOrderSize = 100;
-    cfg[0].m_riskConfig.m_maxPosition = 1000;
-    cfg[0].m_riskConfig.m_maxLoss = -1e9;
+    cfg.at(0).m_clip = 10;
+    cfg.at(0).m_threshold = 0.5;
+    cfg.at(0).m_riskConfig.m_maxOrderSize = 100;
+    cfg.at(0).m_riskConfig.m_maxPosition = 1000;
+    cfg.at(0).m_riskConfig.m_maxLoss = -1e9;
 
     engine = std::make_unique<TradeEngine>(7, AlgoType::INVALID, cfg,
                                            outReq.get(), inResp.get(),

@@ -10,10 +10,10 @@ std::string PositionInfo::toString() const {
      << "position: " << m_position << ", realPnL: " << m_realPnL
      << ", unrealPnL: " << m_unrealPnL << ", totalPnL: " << m_totalPnL
      << ", volume: " << m_volume << ", vwaps: ["
-     << (m_position ? m_openVWAP[sideToIndex(Side::BUY)] / std::abs(m_position)
+     << (m_position ? m_openVWAP.at(sideToIndex(Side::BUY)) / std::abs(m_position)
                     : 0.0)
      << ", "
-     << (m_position ? m_openVWAP[sideToIndex(Side::SELL)] / std::abs(m_position)
+     << (m_position ? m_openVWAP.at(sideToIndex(Side::SELL)) / std::abs(m_position)
                     : 0.0)
      << "] " << (m_bbo ? m_bbo->toString() : "") << "}";
   return ss.str();
@@ -32,33 +32,33 @@ void PositionInfo::addFill(const exchange::ClientResponseImpl *clientResponse,
 
   if (oldPosition * sideValue >= 0) {
     // Same direction, update VWAP
-    m_openVWAP[sideIdx] += clientResponse->m_execQty * clientResponse->m_price;
+    m_openVWAP.at(sideIdx) += clientResponse->m_execQty * clientResponse->m_price;
   } else {
-    const auto oppSideVWAP = m_openVWAP[oppSideIdx] / std::abs(oldPosition);
-    m_openVWAP[oppSideIdx] = oppSideVWAP * std::abs(m_position);
+    const auto oppSideVWAP = m_openVWAP.at(oppSideIdx) / std::abs(oldPosition);
+    m_openVWAP.at(oppSideIdx) = oppSideVWAP * std::abs(m_position);
     m_realPnL += std::min(static_cast<int32_t>(clientResponse->m_execQty),
                           std::abs(oldPosition)) *
                  (oppSideVWAP - clientResponse->m_price) * sideValue;
     if (m_position * oldPosition < 0) {
       // Position flipped, reset VWAP for the new side
-      m_openVWAP[sideIdx] = std::abs(m_position) * clientResponse->m_price;
-      m_openVWAP[oppSideIdx] = 0.0;
+      m_openVWAP.at(sideIdx) = std::abs(m_position) * clientResponse->m_price;
+      m_openVWAP.at(oppSideIdx) = 0.0;
     }
   }
 
   if (!m_position) {
-    m_openVWAP[sideToIndex(Side::BUY)] = 0.0;
-    m_openVWAP[sideToIndex(Side::SELL)] = 0.0;
+    m_openVWAP.at(sideToIndex(Side::BUY)) = 0.0;
+    m_openVWAP.at(sideToIndex(Side::SELL)) = 0.0;
     m_unrealPnL = 0.0;
   } else {
     if (m_position > 0) {
       m_unrealPnL =
           (clientResponse->m_price -
-           (m_openVWAP[sideToIndex(Side::BUY)] / std::abs(m_position))) *
+           (m_openVWAP.at(sideToIndex(Side::BUY)) / std::abs(m_position))) *
           std::abs(m_position);
     } else {
       m_unrealPnL =
-          ((m_openVWAP[sideToIndex(Side::SELL)] / std::abs(m_position)) -
+          ((m_openVWAP.at(sideToIndex(Side::SELL)) / std::abs(m_position)) -
            clientResponse->m_price) *
           std::abs(m_position);
     }
@@ -77,12 +77,12 @@ void PositionInfo::updateBBO(const BBO *bbo, Logger *logger) noexcept {
       bbo->m_askPrice != INVALID_PRICE) {
     const auto midPrice = (bbo->m_bidPrice + bbo->m_askPrice) * 0.5;
     if (m_position > 0) {
-      m_unrealPnL = (midPrice - (m_openVWAP[sideToIndex(Side::BUY)] /
+      m_unrealPnL = (midPrice - (m_openVWAP.at(sideToIndex(Side::BUY)) /
                                  std::abs(m_position))) *
                     std::abs(m_position);
     } else {
       m_unrealPnL =
-          ((m_openVWAP[sideToIndex(Side::SELL)] / std::abs(m_position)) -
+          ((m_openVWAP.at(sideToIndex(Side::SELL)) / std::abs(m_position)) -
            midPrice) *
           std::abs(m_position);
     }
@@ -111,10 +111,10 @@ std::string PositionKeeper::toString() const {
   ss << "PositionKeeper{\n";
   for (TickerId tickerId = 0; tickerId < m_positions.size(); ++tickerId) {
     ss << "tickerId: " << tickerIdToString(tickerId) << ", "
-       << m_positions[tickerId].toString() << "\n";
+       << m_positions.at(tickerId).toString() << "\n";
 
-    totalRealPnL += m_positions[tickerId].m_realPnL;
-    totalVolume += m_positions[tickerId].m_volume;
+    totalRealPnL += m_positions.at(tickerId).m_realPnL;
+    totalVolume += m_positions.at(tickerId).m_volume;
   }
   ss << "Total Real PnL: " << totalRealPnL << ", Total Volume: " << totalVolume
      << "\n";

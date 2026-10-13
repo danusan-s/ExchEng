@@ -8,7 +8,7 @@ void FIFOSequencer::addClientRequest(
     FATAL("FIFOSequencer pending requests exceeded max size of " +
           std::to_string(MAX_ME_PENDING_REQUESTS));
   }
-  m_pendingRequests[m_pendingSize++] = {recvTime, clientRequest};
+  m_pendingRequests.at(m_pendingSize++) = {recvTime, clientRequest};
 }
 
 void FIFOSequencer::sequenceAndPublish() noexcept {
@@ -23,7 +23,7 @@ void FIFOSequencer::sequenceAndPublish() noexcept {
             m_pendingRequests.begin() + m_pendingSize);
 
   for (size_t i = 0; i < m_pendingSize; ++i) {
-    const auto &req = m_pendingRequests[i];
+    const auto &req = m_pendingRequests.at(i);
     m_logger->logData("%:% %() Writing request: %\n", __FILE__, __LINE__,
                       __FUNCTION__, req.m_clientRequest.toString());
     auto *nextToWrite = m_clientRequestQueue->getNextToWriteTo();

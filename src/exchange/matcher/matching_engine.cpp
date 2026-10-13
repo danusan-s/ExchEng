@@ -11,7 +11,7 @@ MatchingEngine::MatchingEngine(
       m_clientResponseQueue(clientResponseQueue),
       m_marketUpdateQueue(marketUpdateQueue), m_logger("matching_engine.log") {
   for (size_t i = 0; i < m_tickerOrderBooks.size(); ++i) {
-    m_tickerOrderBooks[i] =
+    m_tickerOrderBooks.at(i) =
         std::make_unique<MEOrderBook>(static_cast<TickerId>(i), &m_logger, this);
   }
 }
@@ -27,7 +27,7 @@ MatchingEngine::~MatchingEngine() noexcept {
   m_marketUpdateQueue = nullptr;
 
   for (size_t i = 0; i < m_tickerOrderBooks.size(); ++i) {
-    m_tickerOrderBooks[i].reset();
+    m_tickerOrderBooks.at(i).reset();
   }
 }
 
@@ -64,7 +64,8 @@ void MatchingEngine::run() noexcept {
 
 void MatchingEngine::processClientRequest(
     const ClientRequestImpl *meClientRequest) noexcept {
-  auto *orderBook = m_tickerOrderBooks[meClientRequest->m_tickerId].get();
+  auto *orderBook =
+      m_tickerOrderBooks.at(meClientRequest->m_tickerId).get();
   switch (meClientRequest->m_type) {
     case exchange::ClientRequestType::NEW: {
       orderBook->add(meClientRequest->m_clientId, meClientRequest->m_orderId,
