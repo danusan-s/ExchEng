@@ -1,4 +1,5 @@
 #include "trading/strategy/trade_engine.hpp"
+#include "common/perf_utils.hpp"
 #include "trading/strategy/config.hpp"
 
 namespace trading {
@@ -70,7 +71,7 @@ TradeEngine::~TradeEngine() {
 void TradeEngine::start() {
   m_running.store(true, std::memory_order_relaxed);
   auto thread = common::createAndStartThread(-1, "Trading/TradeEngine",
-                                                  [this]() { run(); });
+                                             [this]() { run(); });
   ASSERT(thread != nullptr, "Failed to create trade engine thread");
   thread->detach();
 }
@@ -100,6 +101,7 @@ void TradeEngine::run() noexcept {
     for (auto clientResp = m_incomingClientResponses->getNextToRead();
          clientResp != nullptr;
          clientResp = m_incomingClientResponses->getNextToRead()) {
+      TTT_MEASURE(T9t_TradeEngine_LFQueue_read, m_logger);
       m_logger.logData("%:% %() Received client response: %\n", __FILE__,
                        __LINE__, __FUNCTION__, clientResp->toString());
       onOrderUpdate(clientResp);
@@ -109,6 +111,7 @@ void TradeEngine::run() noexcept {
     for (auto marketUpdate = m_incomingMarketUpdates->getNextToRead();
          marketUpdate != nullptr;
          marketUpdate = m_incomingMarketUpdates->getNextToRead()) {
+      TTT_MEASURE(T9_TradeEngine_LFQueue_read, m_logger);
       m_logger.logData("%:% %() Received market update: %\n", __FILE__,
                        __LINE__, __FUNCTION__, marketUpdate->toString());
       ASSERT(marketUpdate->m_tickerId < m_tickerOrderBooks.size(),
@@ -129,29 +132,46 @@ void TradeEngine::sendClientRequest(
   auto nextWrite = m_outgoingClientRequests->getNextToWriteTo();
   *nextWrite = std::move(*clientRequest);
   m_outgoingClientRequests->updateWriteIndex();
+  TTT_MEASURE(T10_TradeEngine_LFQueue_write, m_logger);
 }
 
 void TradeEngine::onOrderBookUpdate(TickerId tickerId, Price price, Side side,
                                     const MarketOrderBook *orderBook) noexcept {
   const auto bbo = orderBook->getBBO();
   m_positionKeeper.updateBBO(tickerId, bbo);
+
+  START_MEASURE(Trading_TradeEngine_onOrderBookUpdate);
   m_featureEngine.onOrderBookUpdate(tickerId, price, side, orderBook);
+  END_MEASURE(Trading_TradeEngine_onOrderBookUpdate, m_logger);
+
+  START_MEASURE(Trading_TradeEngine_algoOnOrderBookUpdate);
   m_algoOnOrderBookUpdate(tickerId, price, side, orderBook);
+  END_MEASURE(Trading_TradeEngine_algoOnOrderBookUpdate, m_logger);
 }
 
 void TradeEngine::onTradeUpdate(const exchange::MarketUpdateImpl *marketUpdate,
                                 const MarketOrderBook *orderBook) noexcept {
+  START_MEASURE(Trading_TradeEngine_onTradeUpdate);
   m_featureEngine.onTradeUpdate(marketUpdate, orderBook);
+  END_MEASURE(Trading_TradeEngine_onTradeUpdate, m_logger);
+
+  START_MEASURE(Trading_TradeEngine_algoOnTradeUpdate);
   m_algoOnTradeUpdate(marketUpdate, orderBook);
+  END_MEASURE(Trading_TradeEngine_algoOnTradeUpdate, m_logger);
 }
 
 void TradeEngine::onOrderUpdate(
     const exchange::ClientResponseImpl *clientResponse) noexcept {
-  if (clientResponse->m_type == exchange::ClientResponseType::FILLED) {
+  if (clientResponse->m_type == exchange::ClientResponseType::FILLED)
+      [[unlikely]] {
+    START_MEASURE(Trading_TradeEngine_addFill);
     m_positionKeeper.addFill(clientResponse);
+    END_MEASURE(Trading_TradeEngine_addFill, m_logger);
   }
 
+  START_MEASURE(Trading_TradeEngine_algoOnOrderUpdate);
   m_algoOnOrderUpdate(clientResponse);
+  END_MEASURE(Trading_TradeEngine_algoOnOrderUpdate, m_logger);
 }
 
 void TradeEngine::defaultAlgoOnOrderBookUpdate(

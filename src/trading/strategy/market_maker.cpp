@@ -1,4 +1,5 @@
 #include "trading/strategy/market_maker.hpp"
+#include "common/perf_utils.hpp"
 #include "trading/strategy/feature_engine.hpp"
 #include "trading/strategy/trade_engine.hpp"
 
@@ -56,7 +57,9 @@ void MarketMaker::onOrderBookUpdate(TickerId tickerId, Price price, Side side,
     const auto askPrice =
         bbo->m_askPrice + (bbo->m_askPrice - fairPrice >= threshold ? 0 : 1);
 
+    START_MEASURE(Trading_MarketMaker_moveOrders);
     m_orderManager->moveOrders(tickerId, bidPrice, askPrice, clip);
+    END_MEASURE(Trading_MarketMaker_moveOrders, (*m_logger));
   }
 }
 
@@ -69,9 +72,13 @@ void MarketMaker::onTradeUpdate(const exchange::MarketUpdateImpl *marketUpdate,
 
 void MarketMaker::onOrderUpdate(
     const exchange::ClientResponseImpl *clientResponse) noexcept {
+  START_MEASURE(Trading_MarketMaker_onOrderUpdate);
+
   m_logger->logData("%:% %() Received order update %\n", __FILE__, __LINE__,
                     __FUNCTION__, clientResponse->toString());
   m_orderManager->onOrderUpdate(clientResponse);
+
+  END_MEASURE(Trading_MarketMaker_onOrderUpdate, (*m_logger));
 }
 
 } // namespace trading

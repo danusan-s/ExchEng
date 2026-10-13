@@ -26,7 +26,6 @@ target_include_directories(ExchEng
 target_compile_options(ExchEng PRIVATE
     $<$<CONFIG:Debug>:-g>
     $<$<CONFIG:Debug>:-fsanitize=address>
-    $<$<CONFIG:Release>:-ffast-math>
     $<$<CONFIG:Release>:-flto>
     $<$<CONFIG:Release>:-O3>
     $<$<CONFIG:Release>:-march=native>

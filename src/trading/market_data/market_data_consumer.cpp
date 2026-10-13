@@ -1,4 +1,5 @@
 #include "trading/market_data/market_data_consumer.hpp"
+#include "common/perf_utils.hpp"
 #include "common/thread_utils.hpp"
 
 namespace trading {
@@ -40,7 +41,7 @@ void MarketDataConsumer::start() {
   m_running.store(true, std::memory_order_relaxed);
   m_logger.logInfo("Starting MarketDataConsumer.");
   auto thread = common::createAndStartThread(-1, "MarketDataConsumer",
-                                                  [this]() { run(); });
+                                             [this]() { run(); });
   ASSERT(thread != nullptr, "Failed to start MarketDataConsumer thread.");
   thread->detach();
 }
@@ -63,6 +64,10 @@ void MarketDataConsumer::run() noexcept {
 }
 
 void MarketDataConsumer::recvCallback(common::MulticastSocket *socket) {
+  TTT_MEASURE(T7_MarketDataConsumer_UDP_read, m_logger);
+
+  START_MEASURE(Exchange_MarketDataConsumer_recvCallback);
+
   const auto isSnapshotSocket =
       (socket->m_socketFd == m_snapshotSocket.m_socketFd);
 
@@ -107,12 +112,15 @@ void MarketDataConsumer::recvCallback(common::MulticastSocket *socket) {
         auto nextWrite = m_marketUpdateQueue->getNextToWriteTo();
         *nextWrite = std::move(request->m_marketUpdate);
         m_marketUpdateQueue->updateWriteIndex();
+        TTT_MEASURE(T8_MarketDataConsumer_LFQueue_write, m_logger);
       }
     }
     memcpy(socket->m_inboundData.data(), socket->m_inboundData.data() + i,
            socket->m_nextReceiveValidIndex - i);
     socket->m_nextReceiveValidIndex -= i;
   }
+
+  END_MEASURE(Exchange_MarketDataConsumer_recvCallback, m_logger);
 }
 
 void MarketDataConsumer::startSnapshotSync() {

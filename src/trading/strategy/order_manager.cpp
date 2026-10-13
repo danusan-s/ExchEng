@@ -1,4 +1,5 @@
 #include "trading/strategy/order_manager.hpp"
+#include "common/perf_utils.hpp"
 #include "common/types.hpp"
 #include "trading/strategy/trade_engine.hpp"
 
@@ -58,17 +59,24 @@ void OrderManager::moveOrder(OMOrder *order, TickerId tickerId, Price price,
       // difference is ignored so partially filled orders ride their reduced
       // leaves instead of churning a cancel + new on every fill.
       if (order->m_price != price) {
+        START_MEASURE(Trading_OrderManager_cancelOrder);
         cancelOrder(order);
+        END_MEASURE(Trading_OrderManager_cancelOrder, (*m_logger));
       }
     } break;
 
     case OMOrderState::INVALID:
     case OMOrderState::DEAD:
       if (price != INVALID_PRICE) [[likely]] {
+        START_MEASURE(Trading_OrderManager_checkPreTradeRisk);
         const auto riskResult =
             m_riskManager.checkPreTradeRisk(tickerId, side, qty);
+        END_MEASURE(Trading_OrderManager_checkPreTradeRisk, (*m_logger));
+
         if (riskResult == RiskCheckResult::ALLOWED) [[likely]] {
+          START_MEASURE(Trading_OrderManager_newOrder);
           newOrder(order, tickerId, side, price, qty);
+          END_MEASURE(Trading_OrderManager_newOrder, (*m_logger));
         } else {
           m_logger->logError(
               "%:% %() Ticker: % Side: % Qty: % failed risk check: %\n",
@@ -87,11 +95,15 @@ void OrderManager::moveOrder(OMOrder *order, TickerId tickerId, Price price,
 
 void OrderManager::moveOrders(TickerId tickerId, Price bidPrice, Price askPrice,
                               Quantity clip) noexcept {
+  START_MEASURE(Trading_OrderManager_moveBidOrder);
   auto &bidOrders = m_tickerSideOrders.at(tickerId).at(sideToIndex(Side::BUY));
   moveOrder(&bidOrders, tickerId, bidPrice, Side::BUY, clip);
+  END_MEASURE(Trading_OrderManager_moveBidOrder, (*m_logger));
 
+  START_MEASURE(Trading_OrderManager_moveAskOrder);
   auto &askOrders = m_tickerSideOrders.at(tickerId).at(sideToIndex(Side::SELL));
   moveOrder(&askOrders, tickerId, askPrice, Side::SELL, clip);
+  END_MEASURE(Trading_OrderManager_moveAskOrder, (*m_logger));
 }
 
 void OrderManager::onOrderUpdate(

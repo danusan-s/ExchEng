@@ -1,4 +1,5 @@
 #include "trading/strategy/liquidity_taker.hpp"
+#include "common/perf_utils.hpp"
 #include "common/types.hpp"
 #include "trading/strategy/trade_engine.hpp"
 
@@ -55,6 +56,7 @@ void LiquidityTaker::onTradeUpdate(
     const auto threshold =
         m_tickerConfig.at(marketUpdate->m_tickerId).m_threshold;
     if (aggQtyRatio >= threshold) {
+      START_MEASURE(Trading_LiquidityTaker_moveOrders);
       if (marketUpdate->m_side == Side::BUY) {
         m_orderManager->moveOrders(marketUpdate->m_tickerId, bbo->m_askPrice,
                                    INVALID_PRICE, clip);
@@ -62,15 +64,20 @@ void LiquidityTaker::onTradeUpdate(
         m_orderManager->moveOrders(marketUpdate->m_tickerId, INVALID_PRICE,
                                    bbo->m_bidPrice, clip);
       }
+      END_MEASURE(Trading_LiquidityTaker_moveOrders, (*m_logger));
     }
   }
 }
 
 void LiquidityTaker::onOrderUpdate(
     const exchange::ClientResponseImpl *clientResponse) noexcept {
+  START_MEASURE(Trading_LiquidityTaker_onOrderUpdate);
+
   m_logger->logData("%:% %() Received order update %\n", __FILE__, __LINE__,
                     __FUNCTION__, clientResponse->toString());
   m_orderManager->onOrderUpdate(clientResponse);
+
+  END_MEASURE(Trading_LiquidityTaker_onOrderUpdate, (*m_logger));
 }
 
 } // namespace trading

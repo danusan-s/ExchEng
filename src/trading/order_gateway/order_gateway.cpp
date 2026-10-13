@@ -1,4 +1,5 @@
 #include "trading/order_gateway/order_gateway.hpp"
+#include "common/perf_utils.hpp"
 #include "common/thread_utils.hpp"
 #include "exchange/order_server/client_response.hpp"
 #include <string>
@@ -30,7 +31,7 @@ void OrderGateway::start() {
              " on interface " + m_iface + " error: " + std::strerror(errno));
 
   auto thread = common::createAndStartThread(-1, "Trading/OrderGateway",
-                                                  [this]() { run(); });
+                                             [this]() { run(); });
   ASSERT(thread != nullptr, "Failed to create order gateway thread");
   thread->detach();
 }
@@ -48,8 +49,15 @@ void OrderGateway::run() noexcept {
     for (auto clientReq = m_outgoingRequests->getNextToRead();
          clientReq != nullptr;
          clientReq = m_outgoingRequests->getNextToRead()) {
+      TTT_MEASURE(T11_OrderGateway_LFQueue_read, m_logger);
+
+      START_MEASURE(Trading_OrderGateway_send);
       m_socket.send(&m_nextOutgoingSeqNum, sizeof(m_nextOutgoingSeqNum));
       m_socket.send(clientReq, sizeof(exchange::ClientRequestImpl));
+      END_MEASURE(Trading_OrderGateway_send, m_logger);
+
+      TTT_MEASURE(T12_OrderGateway_TCP_write, m_logger);
+
       m_outgoingRequests->updateReadIndex();
 
       m_nextOutgoingSeqNum++;
@@ -62,6 +70,10 @@ void OrderGateway::run() noexcept {
 
 void OrderGateway::recvCallback(common::TCPSocket *socket,
                                 common::Nanos rxTime) noexcept {
+  TTT_MEASURE(T7t_OrderGateway_TCP_read, m_logger);
+
+  START_MEASURE(Trading_OrderGateway_recvCallback);
+
   m_logger.logInfo("%:% %() Received socket:% len:% %\n", __FILE__, __LINE__,
                    __FUNCTION__, socket->m_socketFd,
                    socket->m_nextReceiveValidIndex, rxTime);
@@ -93,11 +105,14 @@ void OrderGateway::recvCallback(common::TCPSocket *socket,
       auto nextWrite = m_incomingResponses->getNextToWriteTo();
       *nextWrite = std::move(clientResp->m_response);
       m_incomingResponses->updateWriteIndex();
+      TTT_MEASURE(T8t_OrderGateway_LFQueue_write, m_logger);
     }
     memcpy(socket->m_inboundData.data(), socket->m_inboundData.data() + i,
            socket->m_nextReceiveValidIndex - i);
     socket->m_nextReceiveValidIndex -= i;
   }
+
+  END_MEASURE(Trading_OrderGateway_recvCallback, m_logger);
 }
 
 } // namespace trading

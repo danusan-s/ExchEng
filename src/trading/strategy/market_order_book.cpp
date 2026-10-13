@@ -1,5 +1,6 @@
 #include "trading/strategy/market_order_book.hpp"
 #include "common/constants.hpp"
+#include "common/perf_utils.hpp"
 #include "trading/strategy/market_order.hpp"
 #include "trading/strategy/trade_engine.hpp"
 
@@ -40,7 +41,10 @@ void MarketOrderBook::onMarketUpdate(
           marketUpdate->m_marketOrderId, marketUpdate->m_side,
           marketUpdate->m_price, marketUpdate->m_qty, marketUpdate->m_priority,
           nullptr, nullptr);
+
+      START_MEASURE(Trading_MarketOrderBook_addOrderToBook);
       addOrderToBook(order);
+      END_MEASURE(Trading_MarketOrderBook_addOrderToBook, (*m_logger));
     } break;
     case exchange::MarketUpdateType::MODIFY: {
       auto order = m_orderHashMap.at(marketUpdate->m_marketOrderId);
@@ -48,7 +52,10 @@ void MarketOrderBook::onMarketUpdate(
     } break;
     case exchange::MarketUpdateType::CANCEL: {
       auto order = m_orderHashMap.at(marketUpdate->m_marketOrderId);
+
+      START_MEASURE(Trading_MarketOrderBook_removeOrderFromBook);
       removeOrderFromBook(order);
+      END_MEASURE(Trading_MarketOrderBook_removeOrderFromBook, (*m_logger));
     } break;
     case exchange::MarketUpdateType::TRADE: {
       m_tradeEngine->onTradeUpdate(marketUpdate, this);
@@ -89,7 +96,9 @@ void MarketOrderBook::onMarketUpdate(
                          static_cast<int>(marketUpdate->m_type));
   }
 
+  START_MEASURE(Trading_MarketOrderBook_updateBBO);
   updateBBO(bidChanged, askChanged);
+  END_MEASURE(Trading_MarketOrderBook_updateBBO, (*m_logger));
 
   m_tradeEngine->onOrderBookUpdate(marketUpdate->m_tickerId,
                                    marketUpdate->m_price, marketUpdate->m_side,
