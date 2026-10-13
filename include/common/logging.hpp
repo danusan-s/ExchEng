@@ -248,15 +248,17 @@ private:
   }
 
   void pushValue(const char *value, size_t length) noexcept {
-    for (size_t i = 0; i < length; i += LOG_BUFFERED_STRING_SIZE) {
+    size_t i = 0;
+    for (; i + LOG_BUFFERED_STRING_SIZE < length;
+         i += LOG_BUFFERED_STRING_SIZE) {
       LogElement logElement{LogType::STRING, {}};
-      size_t chunkSize = std::min(length - i, LOG_BUFFERED_STRING_SIZE);
-      std::memcpy(logElement.u_.s, value + i, chunkSize);
-      if (chunkSize < LOG_BUFFERED_STRING_SIZE) {
-        logElement.u_.s[chunkSize] = '\0';
-      }
+      std::memcpy(logElement.u_.s, value + i, LOG_BUFFERED_STRING_SIZE);
       pushValue(logElement);
     }
+
+    LogElement logElement{LogType::STRING, {}};
+    std::memcpy(logElement.u_.s, value + i, length - i);
+    pushValue(logElement);
   }
 
   void pushValue(const char *value) noexcept {
