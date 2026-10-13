@@ -56,3 +56,8 @@ run_exchange:
 run_clients:
 	./scripts/run_clients.sh
 
+# ===== Run Demo =====
+.PHONY: run_demo
+run_demo:
+	./scripts/run_exchange_and_clients.sh
+
