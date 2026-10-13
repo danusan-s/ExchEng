@@ -1,3 +1,5 @@
+#include <atomic>
+#include <csignal>
 #include <cstdlib>
 #include <memory>
 
@@ -16,6 +18,14 @@ std::unique_ptr<common::Logger> g_logger = nullptr;
 std::unique_ptr<TradeEngine> g_tradeEngine = nullptr;
 std::unique_ptr<MarketDataConsumer> g_marketDataConsumer = nullptr;
 std::unique_ptr<OrderGateway> g_orderGateway = nullptr;
+
+std::atomic<bool> g_running{true};
+
+void signalHandler(int) {
+  std::cerr << "\nSIGINT received. Shutting down trading client." << std::endl;
+
+  g_running.store(false, std::memory_order_relaxed);
+}
 
 static void shutdown() {
   using namespace std::literals::chrono_literals;
@@ -72,6 +82,8 @@ int main(int argc, char **argv) {
 
   g_logger = std::make_unique<common::Logger>(
       "trading_main_" + std::to_string(clientId) + ".log");
+
+  signal(SIGINT, signalHandler);
 
   g_logger->logInfo("%:% %() Starting trading client\n", __FILE__, __LINE__,
                     __FUNCTION__);
@@ -153,7 +165,11 @@ int main(int argc, char **argv) {
   g_logger->logInfo("%:% %() Trading client up and running, warming up\n",
                     __FILE__, __LINE__, __FUNCTION__);
 
-  usleep(10 * 1000 * 1000);
+  // Interruptible warmup: 10s total in 100ms slices so SIGINT is honored.
+  for (int i = 0; i < 100 && g_running.load(std::memory_order_relaxed); ++i) {
+    using namespace std::literals::chrono_literals;
+    std::this_thread::sleep_for(100ms);
+  }
   g_tradeEngine->initLastEventTime();
   g_logger->logInfo("%:% %() Warmup complete, initialized last event time\n",
                     __FILE__, __LINE__, __FUNCTION__);
@@ -168,7 +184,8 @@ int main(int argc, char **argv) {
       prices.at(i) = (rand() % 100) + 100;
     }
     g_tradeEngine->initLastEventTime();
-    for (size_t i = 0; i < 1000; ++i) {
+    for (size_t i = 0; i < 1000 && g_running.load(std::memory_order_relaxed);
+         ++i) {
       g_logger->logInfo("%:% %() RANDOM order flow iteration:%\n", __FILE__,
                         __LINE__, __FUNCTION__, i);
       const TickerId tickerId = rand() % ME_MAX_TICKERS;
@@ -197,20 +214,26 @@ int main(int argc, char **argv) {
                       __LINE__, __FUNCTION__);
   }
 
-  // Wait till no activity
+  // Wait till no activity (1s slices so SIGINT is honored promptly).
   g_logger->logInfo("%:% %() Waiting for trade engine to go silent\n", __FILE__,
                     __LINE__, __FUNCTION__);
-  while (g_tradeEngine->silentSeconds() < 60) {
+  while (g_tradeEngine->silentSeconds() < 60 &&
+         g_running.load(std::memory_order_relaxed)) {
     using namespace std::literals::chrono_literals;
-    std::this_thread::sleep_for(10s);
+    std::this_thread::sleep_for(1s);
   }
-  g_logger->logInfo("%:% %() Trade engine silent, shutting down\n", __FILE__,
-                    __LINE__, __FUNCTION__);
+  if (g_running.load(std::memory_order_relaxed)) {
+    g_logger->logInfo("%:% %() Trade engine silent, shutting down\n", __FILE__,
+                      __LINE__, __FUNCTION__);
+  } else {
+    g_logger->logInfo("%:% %() SIGINT received, shutting down\n", __FILE__,
+                      __LINE__, __FUNCTION__);
+  }
 
   shutdown();
 
   using namespace std::literals::chrono_literals;
   std::this_thread::sleep_for(1s);
 
-  exit(EXIT_SUCCESS);
+  exit(g_running.load(std::memory_order_relaxed) ? EXIT_SUCCESS : 130);
 }

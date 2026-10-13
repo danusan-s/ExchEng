@@ -92,7 +92,7 @@ public:
   template <typename... A> void logDebug(const char *s, A... args) noexcept {
     common::getCurrentTimeStr(&m_timeStr);
     pushValue(m_timeStr);
-    pushValue("\033[34m[DEBUG]\033[0m ");
+    pushValue("\033[90m[DEBUG]\033[0m ");
     log(s, args...);
   }
 
