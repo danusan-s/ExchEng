@@ -40,7 +40,7 @@ MarketDataConsumer::~MarketDataConsumer() {
 void MarketDataConsumer::start() {
   m_running.store(true, std::memory_order_relaxed);
   m_logger.logInfo("Starting MarketDataConsumer.");
-  auto thread = common::createAndStartThread(-1, "MarketDataConsumer",
+  auto thread = common::createAndStartThread(1, "MarketDataConsumer",
                                              [this]() { run(); });
   ASSERT(thread != nullptr, "Failed to start MarketDataConsumer thread.");
   thread->detach();

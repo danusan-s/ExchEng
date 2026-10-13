@@ -38,7 +38,7 @@ void MatchingEngine::start() {
   m_running.store(true, std::memory_order_relaxed);
 
   auto thread =
-      common::createAndStartThread(-1, "MatchingEngine", [this]() { run(); });
+      common::createAndStartThread(2, "MatchingEngine", [this]() { run(); });
   ASSERT(thread != nullptr, "Failed to start MatchingEngine thread.");
   thread->detach();
 }

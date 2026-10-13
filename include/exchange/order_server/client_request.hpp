@@ -18,6 +18,7 @@ enum class ClientRequestType : uint8_t {
   CANCEL = 2,
 };
 
+// TODO: Support more request types like MODIFY, etc.
 inline std::string clientRequestTypeToString(ClientRequestType type) {
   switch (type) {
     case ClientRequestType::INVALID:

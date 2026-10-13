@@ -70,7 +70,7 @@ TradeEngine::~TradeEngine() {
 
 void TradeEngine::start() {
   m_running.store(true, std::memory_order_relaxed);
-  auto thread = common::createAndStartThread(-1, "Trading/TradeEngine",
+  auto thread = common::createAndStartThread(4, "Trading/TradeEngine",
                                              [this]() { run(); });
   ASSERT(thread != nullptr, "Failed to create trade engine thread");
   thread->detach();

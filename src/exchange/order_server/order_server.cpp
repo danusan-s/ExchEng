@@ -34,7 +34,7 @@ void OrderServer::start() {
   m_tcpServer.listen(m_iface, m_port);
 
   auto thread =
-      common::createAndStartThread(-1, "OrderServer", [this]() { run(); });
+      common::createAndStartThread(3, "OrderServer", [this]() { run(); });
   ASSERT(thread != nullptr, "Failed to start OrderServer thread.");
   thread->detach();
 }
