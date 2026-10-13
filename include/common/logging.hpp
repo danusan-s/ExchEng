@@ -1,5 +1,7 @@
 #pragma once
 
+#include <atomic>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -12,6 +14,37 @@
 namespace common {
 
 inline constexpr size_t LOG_QUEUE_SIZE = 8 * 1024 * 1024;
+inline constexpr size_t LOG_BUFFERED_STRING_SIZE = 256;
+
+enum class LogLevel : int8_t {
+  DATA = 0,
+  INFO = 1,
+  DEBUG = 2,
+  WARN = 3,
+  ERROR = 4,
+  NONE =
+      5, // Used to indicate no log level, for example when logging a timestamp
+};
+
+inline const char *getLogLevelString(int i) {
+  LogLevel level = static_cast<LogLevel>(i);
+  switch (level) {
+    case LogLevel::DATA:
+      return " \033[36m[DATA]\033[0m ";
+    case LogLevel::INFO:
+      return " \033[32m[INFO]\033[0m ";
+    case LogLevel::DEBUG:
+      return " \033[90m[DEBUG]\033[0m ";
+    case LogLevel::WARN:
+      return " \033[33m[WARN]\033[0m ";
+    case LogLevel::ERROR:
+      return " \033[31m[ERROR]\033[0m ";
+    case LogLevel::NONE:
+      return "";
+    default:
+      return "UNKNOWN";
+  }
+}
 
 enum class LogType : int8_t {
   TIMESTAMP = 0,
@@ -23,12 +56,11 @@ enum class LogType : int8_t {
   UNSIGNED_LONG_INTEGER = 6,
   UNSIGNED_LONG_LONG_INTEGER = 7,
   FLOAT = 8,
-  DOUBLE = 9
+  DOUBLE = 9,
+  STRING = 10,
+  LOG_LEVEL = 11,
 };
 
-// TODO: a single char doesn't take advantage of the sizing of the union.
-// Maybe logger can own strings, copy string and union holds the pointer
-// Once string is done with then we free it.
 struct LogElement {
   LogType type_ = LogType::CHAR;
   union {
@@ -48,7 +80,7 @@ struct LogElement {
 class Logger final {
 public:
   explicit Logger(const std::string &file_name)
-      : m_fileName("logs/" + file_name), m_queue(LOG_QUEUE_SIZE) {
+      : m_fileName("logs/" + file_name), m_buffer(64), m_queue(LOG_QUEUE_SIZE) {
     std::error_code ec;
     std::filesystem::create_directories(
         std::filesystem::path(m_fileName).parent_path(), ec);
@@ -77,34 +109,31 @@ public:
               << m_fileName << " exiting." << std::endl;
   }
 
-  template <typename... A> void logData(const char *s, A... args) noexcept {
-    pushTimestamp(common::getCurrentNanos());
-    pushValue(" \033[36m[DATA]\033[0m ");
+  template <typename... A>
+  void log(LogLevel level, const char *s, A... args) noexcept {
+    pushValue(LogElement{LogType::TIMESTAMP, {.t = getCurrentNanos()}});
+    pushValue(LogElement{LogType::LOG_LEVEL, {.i = static_cast<int>(level)}});
     log(s, args...);
   }
 
   template <typename... A> void logInfo(const char *s, A... args) noexcept {
-    pushTimestamp(common::getCurrentNanos());
-    pushValue(" \033[32m[INFO]\033[0m ");
-    log(s, args...);
+    log(LogLevel::INFO, s, args...);
+  }
+
+  template <typename... A> void logData(const char *s, A... args) noexcept {
+    log(LogLevel::DATA, s, args...);
   }
 
   template <typename... A> void logDebug(const char *s, A... args) noexcept {
-    pushTimestamp(common::getCurrentNanos());
-    pushValue(" \033[90m[DEBUG]\033[0m ");
-    log(s, args...);
+    log(LogLevel::DEBUG, s, args...);
   }
 
   template <typename... A> void logWarn(const char *s, A... args) noexcept {
-    pushTimestamp(common::getCurrentNanos());
-    pushValue(" \033[33m[WARNING]\033[0m ");
-    log(s, args...);
+    log(LogLevel::WARN, s, args...);
   }
 
   template <typename... A> void logError(const char *s, A... args) noexcept {
-    pushTimestamp(common::getCurrentNanos());
-    pushValue(" \033[31m[ERROR]\033[0m ");
-    log(s, args...);
+    log(LogLevel::ERROR, s, args...);
   }
 
   Logger() = delete;
@@ -151,6 +180,16 @@ private:
           case LogType::DOUBLE:
             m_file << next->u_.d;
             break;
+          case LogType::STRING:
+            m_file << m_buffer[next->u_.i].data();
+            m_bufferUsed.fetch_or(
+                1ull << next->u_.i,
+                std::memory_order_release); // Mark buffer as free
+            break;
+          case LogType::LOG_LEVEL:
+            auto logLevelStr = getLogLevelString(next->u_.i);
+            m_file << logLevelStr;
+            break;
         }
         m_queue.updateReadIndex();
       }
@@ -163,13 +202,9 @@ private:
     }
   }
 
-  void pushValue(const LogElement &log_element) noexcept {
-    *(m_queue.getNextToWriteTo()) = log_element;
+  void pushValue(const LogElement &logElement) noexcept {
+    *(m_queue.getNextToWriteTo()) = logElement;
     m_queue.updateWriteIndex();
-  }
-
-  void pushTimestamp(const Nanos value) noexcept {
-    pushValue(LogElement{LogType::TIMESTAMP, {.t = value}});
   }
 
   void pushValue(const char value) noexcept {
@@ -208,15 +243,39 @@ private:
     pushValue(LogElement{LogType::DOUBLE, {.d = value}});
   }
 
-  void pushValue(const char *value) noexcept {
-    while (*value) {
-      pushValue(*value);
-      ++value;
+  int getFreeBufferIndex() noexcept {
+    auto bufferUsed = m_bufferUsed.load(std::memory_order_acquire);
+    if (bufferUsed != 0) {
+      unsigned index = std::countr_zero(bufferUsed);
+      m_bufferUsed.fetch_and(~(1ull << index),
+                             std::memory_order_release); // Mark buffer as used
+      return index;
     }
+    return -1; // No free buffer available
+  }
+
+  void pushValue(const char *value) noexcept {
+    auto index = getFreeBufferIndex();
+    if (index == -1) [[unlikely]] {
+      while (*value) {
+        pushValue(*value++);
+      }
+      return;
+    }
+
+    std::strncpy(m_buffer[index].data(), value, m_buffer[index].size() - 1);
+    m_buffer[index][m_buffer[index].size() - 1] =
+        '\0'; // Ensure null termination
+
+    pushValue(LogElement{LogType::STRING, {.i = index}});
   }
 
   void pushValue(const std::string &value) noexcept {
     pushValue(value.c_str());
+  }
+
+  void pushValue(const std::string_view &value) noexcept {
+    pushValue(value.data());
   }
 
   template <typename T, typename... A>
@@ -227,8 +286,8 @@ private:
             [[unlikely]] { // to allow %% -> % escape character.
           ++s;
         } else {
-          pushValue(
-              value); // substitute % with the value specified in the arguments.
+          pushValue(value);    // substitute % with the value specified in the
+                               // arguments.
           log(s + 1, args...); // pop an argument and call self recursively.
           return;
         }
@@ -259,6 +318,10 @@ private:
 private:
   const std::string m_fileName;
   std::ofstream m_file;
+
+  std::vector<std::array<char, LOG_BUFFERED_STRING_SIZE>> m_buffer;
+  std::atomic<uint64_t> m_bufferUsed =
+      UINT64_MAX; // Bitset to track used buffers (1 = free, 0 = used)
 
   std::string m_timeStr;
 

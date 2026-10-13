@@ -20,7 +20,7 @@ enum class MarketUpdateType : uint8_t {
   SNAPSHOT_END = 7
 };
 
-inline std::string marketUpdateTypeToString(MarketUpdateType type) {
+inline const char *marketUpdateTypeToString(MarketUpdateType type) {
   switch (type) {
     case MarketUpdateType::ADD:
       return "ADD";

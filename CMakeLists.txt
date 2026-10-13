@@ -74,6 +74,8 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
   )
 endif()
 
+add_subdirectory(benchmark EXCLUDE_FROM_ALL)
+
 enable_testing()
 add_subdirectory(tests EXCLUDE_FROM_ALL)
 

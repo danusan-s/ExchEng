@@ -47,3 +47,14 @@ Run the client script:
 make run_client
 ```
 
+## Future work
+- Implement extensions or improvements marked as TODO in the code.
+- Reduce logging and asserts in production build.
+- Explore system setup such as isolcpu, NUMA etc.
+
+## System Specifications
+
+- OS: Cachy Os
+- Compiler : g++ 16.2.1
+- CPU : AMD Ryzen 7 6800H (8 cores, 16 threads, 3.7 GHz max clock)
+- RAM : 16 GB

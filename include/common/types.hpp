@@ -61,7 +61,7 @@ inline std::string priorityToString(Priority priority) {
 }
 
 enum class Side : uint8_t { BUY = 0, SELL = 1, INVALID = 2, MAX = 2 };
-inline std::string sideToString(Side side) {
+inline const char *sideToString(Side side) {
   switch (side) {
     case Side::BUY:
       return "BUY";

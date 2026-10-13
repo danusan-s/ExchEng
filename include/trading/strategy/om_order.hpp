@@ -17,7 +17,7 @@ enum class OMOrderState : uint8_t {
   DEAD = 4
 };
 
-inline std::string orderStateToString(OMOrderState state) {
+inline const char *orderStateToString(OMOrderState state) {
   switch (state) {
     case OMOrderState::INVALID:
       return "INVALID";
