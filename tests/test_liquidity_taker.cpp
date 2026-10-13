@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <memory>
+
 #include "common/logging.hpp"
 #include "trading/strategy/liquidity_taker.hpp"
 #include "trading/strategy/trade_engine.hpp"
@@ -9,32 +11,32 @@ using namespace exchange;
 
 class LiquidityTakerTest : public ::testing::Test {
 protected:
-  static ClientRequestImplQueue *outReq;
-  static ClientResponseImplQueue *inResp;
-  static MarketUpdateImplQueue *inMd;
-  static common::Logger *logger;
+  static std::unique_ptr<ClientRequestImplQueue> outReq;
+  static std::unique_ptr<ClientResponseImplQueue> inResp;
+  static std::unique_ptr<MarketUpdateImplQueue> inMd;
+  static std::unique_ptr<common::Logger> logger;
 
-  TradeEngine *engine = nullptr;
-  FeatureEngine *features = nullptr;
-  PositionKeeper *keeper = nullptr;
-  RiskManager *risk = nullptr;
-  OrderManager *oms = nullptr;
-  LiquidityTaker *taker = nullptr;
-  MarketOrderBook *book = nullptr;
+  std::unique_ptr<TradeEngine> engine = nullptr;
+  std::unique_ptr<FeatureEngine> features = nullptr;
+  std::unique_ptr<PositionKeeper> keeper = nullptr;
+  std::unique_ptr<RiskManager> risk = nullptr;
+  std::unique_ptr<OrderManager> oms = nullptr;
+  std::unique_ptr<LiquidityTaker> taker = nullptr;
+  std::unique_ptr<MarketOrderBook> book = nullptr;
   TradeEngineConfigMap cfg{};
 
   static void SetUpTestSuite() {
-    outReq = new ClientRequestImplQueue(4096);
-    inResp = new ClientResponseImplQueue(4096);
-    inMd = new MarketUpdateImplQueue(4096);
-    logger = new common::Logger("test_liquidity_taker.log");
+    outReq = std::make_unique<ClientRequestImplQueue>(4096);
+    inResp = std::make_unique<ClientResponseImplQueue>(4096);
+    inMd = std::make_unique<MarketUpdateImplQueue>(4096);
+    logger = std::make_unique<common::Logger>("test_liquidity_taker.log");
   }
 
   static void TearDownTestSuite() {
-    delete logger;
-    delete outReq;
-    delete inResp;
-    delete inMd;
+    logger.reset();
+    outReq.reset();
+    inResp.reset();
+    inMd.reset();
   }
 
   void SetUp() override {
@@ -47,28 +49,29 @@ protected:
     cfg[0].m_riskConfig.m_maxPosition = 1000;
     cfg[0].m_riskConfig.m_maxLoss = -1e9;
 
-    engine = new TradeEngine(7, AlgoType::INVALID, cfg, outReq, inResp, inMd);
-    features = new FeatureEngine(logger);
-    keeper = new PositionKeeper(logger);
-    risk = new RiskManager(keeper, cfg, logger);
-    oms = new OrderManager(engine, *risk, logger);
-    taker = new LiquidityTaker(engine, features, oms, cfg, logger);
-    book = new MarketOrderBook(0, logger);
-    book->setTradeEngine(engine);
+    engine = std::make_unique<TradeEngine>(7, AlgoType::INVALID, cfg,
+                                           outReq.get(), inResp.get(),
+                                           inMd.get());
+    features = std::make_unique<FeatureEngine>(logger.get());
+    keeper = std::make_unique<PositionKeeper>(logger.get());
+    risk = std::make_unique<RiskManager>(keeper.get(), cfg, logger.get());
+    oms = std::make_unique<OrderManager>(engine.get(), *risk, logger.get());
+    taker = std::make_unique<LiquidityTaker>(engine.get(), features.get(),
+                                             oms.get(), cfg, logger.get());
+    book = std::make_unique<MarketOrderBook>(0, logger.get());
+    book->setTradeEngine(engine.get());
   }
 
   void TearDown() override {
     // Destroy the engine before the book: the engine's position keeper holds
     // a pointer to this book's BBO and dereferences it while stopping.
-    delete taker;
-    delete oms;
-    delete risk;
-    delete keeper;
-    delete features;
-    delete engine;
-    engine = nullptr;
-    delete book;
-    book = nullptr;
+    taker.reset();
+    oms.reset();
+    risk.reset();
+    keeper.reset();
+    features.reset();
+    engine.reset();
+    book.reset();
     while (outReq->size())
       outReq->updateReadIndex();
     while (inResp->size())
@@ -95,15 +98,15 @@ protected:
   }
 };
 
-ClientRequestImplQueue *LiquidityTakerTest::outReq = nullptr;
-ClientResponseImplQueue *LiquidityTakerTest::inResp = nullptr;
-MarketUpdateImplQueue *LiquidityTakerTest::inMd = nullptr;
-common::Logger *LiquidityTakerTest::logger = nullptr;
+std::unique_ptr<ClientRequestImplQueue> LiquidityTakerTest::outReq = nullptr;
+std::unique_ptr<ClientResponseImplQueue> LiquidityTakerTest::inResp = nullptr;
+std::unique_ptr<MarketUpdateImplQueue> LiquidityTakerTest::inMd = nullptr;
+std::unique_ptr<common::Logger> LiquidityTakerTest::logger = nullptr;
 
 // Verifies order-book updates alone never trigger taker orders.
 TEST_F(LiquidityTakerTest, BookUpdateSendsNothing) {
   makeTwoSidedBook();
-  taker->onOrderBookUpdate(0, 102, common::Side::SELL, book);
+  taker->onOrderBookUpdate(0, 102, common::Side::SELL, book.get());
   EXPECT_EQ(outReq->size(), 0u);
 }
 
@@ -117,8 +120,8 @@ TEST_F(LiquidityTakerTest, WeakSignalSendsNothing) {
                      102,
                      1,
                      common::INVALID_PRIORITY};
-  features->onTradeUpdate(&t, book); // Ratio 1/20 = 0.05 < 0.5.
-  taker->onTradeUpdate(&t, book);
+  features->onTradeUpdate(&t, book.get()); // Ratio 1/20 = 0.05 < 0.5.
+  taker->onTradeUpdate(&t, book.get());
   EXPECT_EQ(outReq->size(), 0u);
 }
 
@@ -132,9 +135,9 @@ TEST_F(LiquidityTakerTest, ThresholdBoundaryTriggers) {
                      102,
                      10,
                      common::INVALID_PRIORITY};
-  features->onTradeUpdate(&t, book); // Ratio 10/20 = 0.5 == threshold.
+  features->onTradeUpdate(&t, book.get()); // Ratio 10/20 = 0.5 == threshold.
   ASSERT_DOUBLE_EQ(features->getAggresiveTradeQtyRatio(), 0.5);
-  taker->onTradeUpdate(&t, book);
+  taker->onTradeUpdate(&t, book.get());
   EXPECT_EQ(outReq->size(), 1u);
 }
 
@@ -149,8 +152,8 @@ TEST_F(LiquidityTakerTest, StrongBuySignalBuysAtAsk) {
                      102,
                      20,
                      common::INVALID_PRIORITY};
-  features->onTradeUpdate(&t, book); // Ratio 20/20 = 1.0 >= 0.5.
-  taker->onTradeUpdate(&t, book);
+  features->onTradeUpdate(&t, book.get()); // Ratio 20/20 = 1.0 >= 0.5.
+  taker->onTradeUpdate(&t, book.get());
   ASSERT_EQ(outReq->size(), 1u);
   const auto req = *outReq->getNextToRead();
   EXPECT_EQ(req.m_side, common::Side::BUY);
@@ -168,8 +171,8 @@ TEST_F(LiquidityTakerTest, StrongSellSignalSellsAtBid) {
                      100,
                      20,
                      common::INVALID_PRIORITY};
-  features->onTradeUpdate(&t, book); // Ratio 20/20 = 1.0 >= 0.5.
-  taker->onTradeUpdate(&t, book);
+  features->onTradeUpdate(&t, book.get()); // Ratio 20/20 = 1.0 >= 0.5.
+  taker->onTradeUpdate(&t, book.get());
   ASSERT_EQ(outReq->size(), 1u);
   const auto req = *outReq->getNextToRead();
   EXPECT_EQ(req.m_side, common::Side::SELL);
@@ -188,7 +191,7 @@ TEST_F(LiquidityTakerTest, InvalidRatioSendsNothing) {
                      102,
                      10,
                      common::INVALID_PRIORITY};
-  taker->onTradeUpdate(&t, book);
+  taker->onTradeUpdate(&t, book.get());
   EXPECT_EQ(outReq->size(), 0u);
 }
 
@@ -203,8 +206,8 @@ TEST_F(LiquidityTakerTest, OrderUpdateForwardedWithoutNewRequests) {
                      102,
                      20,
                      common::INVALID_PRIORITY};
-  features->onTradeUpdate(&t, book);
-  taker->onTradeUpdate(&t, book);
+  features->onTradeUpdate(&t, book.get());
+  taker->onTradeUpdate(&t, book.get());
   ASSERT_EQ(outReq->size(), 1u);
   const OrderId buyId = outReq->getNextToRead()->m_orderId;
   while (outReq->size())

@@ -5,6 +5,8 @@
 #include "exchange/market_data/market_update.hpp"
 #include "exchange/market_data/snapshot_synthesizer.hpp"
 
+#include <memory>
+
 using namespace common;
 
 namespace exchange {
@@ -39,7 +41,7 @@ private:
   std::atomic<bool> m_running = false;
 
   MarketUpdateQueue m_snapshotUpdateQueue;
-  SnapshotSynthesizer *m_snapshotSynthesizer = nullptr;
+  std::unique_ptr<SnapshotSynthesizer> m_snapshotSynthesizer = nullptr;
 };
 
 } // namespace exchange

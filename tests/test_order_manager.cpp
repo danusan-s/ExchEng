@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <memory>
+
 #include "common/logging.hpp"
 #include "trading/strategy/order_manager.hpp"
 #include "trading/strategy/trade_engine.hpp"
@@ -9,22 +11,22 @@ using namespace exchange;
 
 class OrderManagerTest : public ::testing::Test {
 protected:
-  static ClientRequestImplQueue *outReq;
-  static ClientResponseImplQueue *inResp;
-  static MarketUpdateImplQueue *inMd;
-  static common::Logger *engLogger;
-  static TradeEngine *engine;
-  static common::Logger *omLogger;
+  static std::unique_ptr<ClientRequestImplQueue> outReq;
+  static std::unique_ptr<ClientResponseImplQueue> inResp;
+  static std::unique_ptr<MarketUpdateImplQueue> inMd;
+  static std::unique_ptr<common::Logger> engLogger;
+  static std::unique_ptr<TradeEngine> engine;
+  static std::unique_ptr<common::Logger> omLogger;
 
-  PositionKeeper *keeper = nullptr;
-  RiskManager *risk = nullptr;
-  OrderManager *oms = nullptr;
+  std::unique_ptr<PositionKeeper> keeper = nullptr;
+  std::unique_ptr<RiskManager> risk = nullptr;
+  std::unique_ptr<OrderManager> oms = nullptr;
 
   static void SetUpTestSuite() {
-    outReq = new ClientRequestImplQueue(4096);
-    inResp = new ClientResponseImplQueue(4096);
-    inMd = new MarketUpdateImplQueue(4096);
-    engLogger = new common::Logger("test_om_eng.log");
+    outReq = std::make_unique<ClientRequestImplQueue>(4096);
+    inResp = std::make_unique<ClientResponseImplQueue>(4096);
+    inMd = std::make_unique<MarketUpdateImplQueue>(4096);
+    engLogger = std::make_unique<common::Logger>("test_om_eng.log");
     TradeEngineConfigMap cfg{};
     for (auto &c : cfg) {
       c.m_clip = 10;
@@ -32,35 +34,36 @@ protected:
       c.m_riskConfig.m_maxPosition = 1000;
       c.m_riskConfig.m_maxLoss = -1e9;
     }
-    engine = new TradeEngine(7, AlgoType::INVALID, cfg, outReq, inResp, inMd);
-    omLogger = new common::Logger("test_order_manager.log");
+    engine = std::make_unique<TradeEngine>(7, AlgoType::INVALID, cfg,
+                                           outReq.get(), inResp.get(),
+                                           inMd.get());
+    omLogger = std::make_unique<common::Logger>("test_order_manager.log");
   }
 
   static void TearDownTestSuite() {
-    delete engine;
-    engine = nullptr;
-    delete engLogger;
-    delete omLogger;
+    engine.reset();
+    engLogger.reset();
+    omLogger.reset();
   }
 
   void SetUp() override {
     while (outReq->size())
       outReq->updateReadIndex();
-    keeper = new PositionKeeper(omLogger);
+    keeper = std::make_unique<PositionKeeper>(omLogger.get());
     TradeEngineConfigMap cfg{};
     for (auto &c : cfg) {
       c.m_riskConfig.m_maxOrderSize = 100;
       c.m_riskConfig.m_maxPosition = 1000;
       c.m_riskConfig.m_maxLoss = -1e9;
     }
-    risk = new RiskManager(keeper, cfg, omLogger);
-    oms = new OrderManager(engine, *risk, omLogger);
+    risk = std::make_unique<RiskManager>(keeper.get(), cfg, omLogger.get());
+    oms = std::make_unique<OrderManager>(engine.get(), *risk, omLogger.get());
   }
 
   void TearDown() override {
-    delete oms;
-    delete risk;
-    delete keeper;
+    oms.reset();
+    risk.reset();
+    keeper.reset();
     while (outReq->size())
       outReq->updateReadIndex();
   }
@@ -71,12 +74,12 @@ protected:
   }
 };
 
-ClientRequestImplQueue *OrderManagerTest::outReq = nullptr;
-ClientResponseImplQueue *OrderManagerTest::inResp = nullptr;
-MarketUpdateImplQueue *OrderManagerTest::inMd = nullptr;
-common::Logger *OrderManagerTest::engLogger = nullptr;
-TradeEngine *OrderManagerTest::engine = nullptr;
-common::Logger *OrderManagerTest::omLogger = nullptr;
+std::unique_ptr<ClientRequestImplQueue> OrderManagerTest::outReq = nullptr;
+std::unique_ptr<ClientResponseImplQueue> OrderManagerTest::inResp = nullptr;
+std::unique_ptr<MarketUpdateImplQueue> OrderManagerTest::inMd = nullptr;
+std::unique_ptr<common::Logger> OrderManagerTest::engLogger = nullptr;
+std::unique_ptr<TradeEngine> OrderManagerTest::engine = nullptr;
+std::unique_ptr<common::Logger> OrderManagerTest::omLogger = nullptr;
 
 // Verifies newOrder sends a NEW request and marks the slot PENDING_NEW.
 TEST_F(OrderManagerTest, NewOrderSendsNewAndPends) {

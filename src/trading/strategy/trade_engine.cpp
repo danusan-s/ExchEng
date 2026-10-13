@@ -17,7 +17,8 @@ TradeEngine::TradeEngine(
       m_orderManager(this, m_riskManager, &m_logger),
       m_riskManager(&m_positionKeeper, tickerConfig, &m_logger) {
   for (TickerId tickerId = 0; tickerId < ME_MAX_TICKERS; ++tickerId) {
-    m_tickerOrderBooks.at(tickerId) = new MarketOrderBook(tickerId, &m_logger);
+    m_tickerOrderBooks.at(tickerId) =
+        std::make_unique<MarketOrderBook>(tickerId, &m_logger);
     m_tickerOrderBooks.at(tickerId)->setTradeEngine(this);
   }
 
@@ -33,10 +34,10 @@ TradeEngine::TradeEngine(
   };
 
   if (algoType == AlgoType::MAKER) {
-    m_marketMakerAlgo = new MarketMaker(this, &m_featureEngine, &m_orderManager,
-                                        tickerConfig, &m_logger);
+    m_marketMakerAlgo = std::make_unique<MarketMaker>(
+        this, &m_featureEngine, &m_orderManager, tickerConfig, &m_logger);
   } else if (algoType == AlgoType::TAKER) {
-    m_liquidityTakerAlgo = new LiquidityTaker(
+    m_liquidityTakerAlgo = std::make_unique<LiquidityTaker>(
         this, &m_featureEngine, &m_orderManager, tickerConfig, &m_logger);
   }
 
@@ -54,14 +55,11 @@ TradeEngine::~TradeEngine() {
   using namespace std::literals::chrono_literals;
   std::this_thread::sleep_for(1s);
 
-  delete m_marketMakerAlgo;
-  m_marketMakerAlgo = nullptr;
-  delete m_liquidityTakerAlgo;
-  m_liquidityTakerAlgo = nullptr;
+  m_marketMakerAlgo.reset();
+  m_liquidityTakerAlgo.reset();
 
   for (TickerId tickerId = 0; tickerId < ME_MAX_TICKERS; ++tickerId) {
-    delete m_tickerOrderBooks.at(tickerId);
-    m_tickerOrderBooks.at(tickerId) = nullptr;
+    m_tickerOrderBooks.at(tickerId).reset();
   }
 
   m_outgoingClientRequests = nullptr;

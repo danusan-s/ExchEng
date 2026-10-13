@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <memory>
+
 #include "common/logging.hpp"
 #include "trading/strategy/position_keeper.hpp"
 #include "trading/strategy/risk_manager.hpp"
@@ -9,34 +11,31 @@ using namespace exchange;
 
 class RiskManagerTest : public ::testing::Test {
 protected:
-  static common::Logger *logger;
+  static std::unique_ptr<common::Logger> logger;
 
-  PositionKeeper *keeper = nullptr;
-  RiskManager *risk = nullptr;
+  std::unique_ptr<PositionKeeper> keeper = nullptr;
+  std::unique_ptr<RiskManager> risk = nullptr;
 
   static void SetUpTestSuite() {
-    logger = new common::Logger("test_risk_manager.log");
+    logger = std::make_unique<common::Logger>("test_risk_manager.log");
   }
 
   static void TearDownTestSuite() {
-    delete logger;
-    logger = nullptr;
+    logger.reset();
   }
 
   void SetUp() override {
-    keeper = new PositionKeeper(logger);
+    keeper = std::make_unique<PositionKeeper>(logger.get());
     TradeEngineConfigMap cfg{};
     cfg[0].m_riskConfig.m_maxOrderSize = 100;
     cfg[0].m_riskConfig.m_maxPosition = 200;
     cfg[0].m_riskConfig.m_maxLoss = -1000.0;
-    risk = new RiskManager(keeper, cfg, logger);
+    risk = std::make_unique<RiskManager>(keeper.get(), cfg, logger.get());
   }
 
   void TearDown() override {
-    delete risk;
-    risk = nullptr;
-    delete keeper;
-    keeper = nullptr;
+    risk.reset();
+    keeper.reset();
   }
 
   void buyFill(TickerId t, Price p, Quantity q) {
@@ -46,7 +45,7 @@ protected:
   }
 };
 
-common::Logger *RiskManagerTest::logger = nullptr;
+std::unique_ptr<common::Logger> RiskManagerTest::logger = nullptr;
 
 // Verifies a normal small order passes all risk checks.
 TEST_F(RiskManagerTest, SmallOrderIsAllowed) {

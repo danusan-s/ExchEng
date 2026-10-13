@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <memory>
+
 #include "common/logging.hpp"
 #include "trading/strategy/position_keeper.hpp"
 
@@ -8,26 +10,24 @@ using namespace exchange;
 
 class PositionKeeperTest : public ::testing::Test {
 protected:
-  static common::Logger *logger;
+  static std::unique_ptr<common::Logger> logger;
 
-  PositionKeeper *keeper = nullptr;
+  std::unique_ptr<PositionKeeper> keeper = nullptr;
 
   static void SetUpTestSuite() {
-    logger = new common::Logger("test_position_keeper.log");
+    logger = std::make_unique<common::Logger>("test_position_keeper.log");
   }
 
   static void TearDownTestSuite() {
-    delete logger;
-    logger = nullptr;
+    logger.reset();
   }
 
   void SetUp() override {
-    keeper = new PositionKeeper(logger);
+    keeper = std::make_unique<PositionKeeper>(logger.get());
   }
 
   void TearDown() override {
-    delete keeper;
-    keeper = nullptr;
+    keeper.reset();
   }
 
   ClientResponseImpl fill(TickerId t, common::Side s, Price p, Quantity q) {
@@ -36,7 +36,7 @@ protected:
   }
 };
 
-common::Logger *PositionKeeperTest::logger = nullptr;
+std::unique_ptr<common::Logger> PositionKeeperTest::logger = nullptr;
 
 // Verifies a fresh keeper starts flat with zero PnL and volume.
 TEST_F(PositionKeeperTest, StartsFlatWithZeroPnl) {

@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <memory>
 #include <vector>
 
 #include "common/logging.hpp"
@@ -15,52 +16,47 @@ using namespace exchange;
 
 class TradingBookTest : public ::testing::Test {
 protected:
-  static ClientRequestImplQueue *outReq;
-  static ClientResponseImplQueue *inResp;
-  static MarketUpdateImplQueue *inMd;
-  static common::Logger *engLogger;
-  static TradeEngine *engine;
-  static common::Logger *bookLogger;
+  static std::unique_ptr<ClientRequestImplQueue> outReq;
+  static std::unique_ptr<ClientResponseImplQueue> inResp;
+  static std::unique_ptr<MarketUpdateImplQueue> inMd;
+  static std::unique_ptr<common::Logger> engLogger;
+  static std::unique_ptr<TradeEngine> engine;
+  static std::unique_ptr<common::Logger> bookLogger;
   // Retired books stay alive until the engine is destroyed, since the
   // engine's position keeper points at their BBOs and reads them on stop().
-  static std::vector<MarketOrderBook *> retired;
+  static std::vector<std::unique_ptr<MarketOrderBook>> retired;
 
-  MarketOrderBook *book = nullptr;
+  std::unique_ptr<MarketOrderBook> book = nullptr;
 
   static void SetUpTestSuite() {
-    outReq = new ClientRequestImplQueue(4096);
-    inResp = new ClientResponseImplQueue(4096);
-    inMd = new MarketUpdateImplQueue(4096);
-    engLogger = new common::Logger("test_trading_book_eng.log");
+    outReq = std::make_unique<ClientRequestImplQueue>(4096);
+    inResp = std::make_unique<ClientResponseImplQueue>(4096);
+    inMd = std::make_unique<MarketUpdateImplQueue>(4096);
+    engLogger = std::make_unique<common::Logger>("test_trading_book_eng.log");
     TradeEngineConfigMap cfg{};
-    engine = new TradeEngine(1, AlgoType::INVALID, cfg, outReq, inResp, inMd);
-    bookLogger = new common::Logger("test_trading_book.log");
+    engine = std::make_unique<TradeEngine>(1, AlgoType::INVALID, cfg,
+                                           outReq.get(), inResp.get(),
+                                           inMd.get());
+    bookLogger = std::make_unique<common::Logger>("test_trading_book.log");
   }
 
   static void TearDownTestSuite() {
-    delete engine;
-    engine = nullptr;
-    for (auto *b : retired) {
-      delete b;
-    }
+    engine.reset();
     retired.clear();
-    delete engLogger;
-    engLogger = nullptr;
-    delete bookLogger;
-    bookLogger = nullptr;
-    delete outReq;
-    delete inResp;
-    delete inMd;
+    engLogger.reset();
+    bookLogger.reset();
+    outReq.reset();
+    inResp.reset();
+    inMd.reset();
   }
 
   void SetUp() override {
-    book = new MarketOrderBook(0, bookLogger);
-    book->setTradeEngine(engine);
+    book = std::make_unique<MarketOrderBook>(0, bookLogger.get());
+    book->setTradeEngine(engine.get());
   }
 
   void TearDown() override {
-    retired.push_back(book);
-    book = nullptr;
+    retired.push_back(std::move(book));
   }
 
   MarketUpdateImpl addUpd(OrderId oid, common::Side s, Price p, Quantity q,
@@ -69,13 +65,13 @@ protected:
   }
 };
 
-ClientRequestImplQueue *TradingBookTest::outReq = nullptr;
-ClientResponseImplQueue *TradingBookTest::inResp = nullptr;
-MarketUpdateImplQueue *TradingBookTest::inMd = nullptr;
-common::Logger *TradingBookTest::engLogger = nullptr;
-TradeEngine *TradingBookTest::engine = nullptr;
-common::Logger *TradingBookTest::bookLogger = nullptr;
-std::vector<MarketOrderBook *> TradingBookTest::retired{};
+std::unique_ptr<ClientRequestImplQueue> TradingBookTest::outReq = nullptr;
+std::unique_ptr<ClientResponseImplQueue> TradingBookTest::inResp = nullptr;
+std::unique_ptr<MarketUpdateImplQueue> TradingBookTest::inMd = nullptr;
+std::unique_ptr<common::Logger> TradingBookTest::engLogger = nullptr;
+std::unique_ptr<TradeEngine> TradingBookTest::engine = nullptr;
+std::unique_ptr<common::Logger> TradingBookTest::bookLogger = nullptr;
+std::vector<std::unique_ptr<MarketOrderBook>> TradingBookTest::retired{};
 
 // Verifies the first update on an empty side leaves BBO invalid (book only
 // refreshes BBO when the side already exists).

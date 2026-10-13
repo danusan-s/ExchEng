@@ -2,6 +2,17 @@
 
 namespace common {
 
+TCPServer::~TCPServer() {
+  // The same socket can be present in both lists; delete each object once.
+  for (auto *socket : m_sendSockets) {
+    if (std::find(m_receiveSockets.begin(), m_receiveSockets.end(), socket) ==
+        m_receiveSockets.end())
+      delete socket;
+  }
+  for (auto *socket : m_receiveSockets)
+    delete socket;
+}
+
 /// Add and remove socket file descriptors to and from the EPOLL list.
 auto TCPServer::addToEpollList(TCPSocket *socket) {
   epoll_event ev{EPOLLET | EPOLLIN, {reinterpret_cast<void *>(socket)}};

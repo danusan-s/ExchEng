@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <memory>
+
 #include "common/logging.hpp"
 #include "exchange/order_server/fifo_sequencer.hpp"
 
@@ -7,32 +9,29 @@ using namespace exchange;
 
 class FIFOSequencerTest : public ::testing::Test {
 protected:
-  static ClientRequestImplQueue *queue;
-  static common::Logger *logger;
+  static std::unique_ptr<ClientRequestImplQueue> queue;
+  static std::unique_ptr<common::Logger> logger;
 
-  FIFOSequencer *sequencer = nullptr;
+  std::unique_ptr<FIFOSequencer> sequencer = nullptr;
 
   static void SetUpTestSuite() {
-    queue = new ClientRequestImplQueue(1024);
-    logger = new common::Logger("test_fifo_sequencer.log");
+    queue = std::make_unique<ClientRequestImplQueue>(1024);
+    logger = std::make_unique<common::Logger>("test_fifo_sequencer.log");
   }
 
   static void TearDownTestSuite() {
-    delete queue;
-    queue = nullptr;
-    delete logger;
-    logger = nullptr;
+    queue.reset();
+    logger.reset();
   }
 
   void SetUp() override {
     while (queue->size())
       queue->updateReadIndex();
-    sequencer = new FIFOSequencer(queue, logger);
+    sequencer = std::make_unique<FIFOSequencer>(queue.get(), logger.get());
   }
 
   void TearDown() override {
-    delete sequencer;
-    sequencer = nullptr;
+    sequencer.reset();
     while (queue->size())
       queue->updateReadIndex();
   }
@@ -43,8 +42,8 @@ protected:
   }
 };
 
-ClientRequestImplQueue *FIFOSequencerTest::queue = nullptr;
-common::Logger *FIFOSequencerTest::logger = nullptr;
+std::unique_ptr<ClientRequestImplQueue> FIFOSequencerTest::queue = nullptr;
+std::unique_ptr<common::Logger> FIFOSequencerTest::logger = nullptr;
 
 // Verifies publishing with no pending requests leaves the queue empty.
 TEST_F(FIFOSequencerTest, EmptyPublishIsNoOp) {

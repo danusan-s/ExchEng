@@ -13,6 +13,7 @@
 #include "trading/strategy/order_manager.hpp"
 #include "trading/strategy/risk_manager.hpp"
 #include <functional>
+#include <memory>
 
 namespace trading {
 
@@ -65,7 +66,7 @@ public:
   // Testability: expose a ticker book so tests can drive market data through
   // the engine's real run-path objects without extra ownership hazards.
   MarketOrderBook *getOrderBook(TickerId tickerId) const noexcept {
-    return m_tickerOrderBooks.at(tickerId);
+    return m_tickerOrderBooks.at(tickerId).get();
   }
 
   void initLastEventTime() noexcept {
@@ -101,8 +102,8 @@ private:
   OrderManager m_orderManager;
   RiskManager m_riskManager;
 
-  MarketMaker *m_marketMakerAlgo = nullptr;
-  LiquidityTaker *m_liquidityTakerAlgo = nullptr;
+  std::unique_ptr<MarketMaker> m_marketMakerAlgo = nullptr;
+  std::unique_ptr<LiquidityTaker> m_liquidityTakerAlgo = nullptr;
 };
 
 } // namespace trading

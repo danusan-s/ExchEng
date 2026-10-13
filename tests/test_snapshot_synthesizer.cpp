@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <memory>
+
 #include "common/logging.hpp"
 #include "exchange/market_data/snapshot_synthesizer.hpp"
 
@@ -8,26 +10,24 @@ using namespace exchange;
 // Each test uses a fresh synthesizer (own seq counter + order map).
 class SnapshotTest : public ::testing::Test {
 protected:
-  MarketUpdateQueue *queue = nullptr;
-  common::Logger *logger = nullptr;
-  SnapshotSynthesizer *synth = nullptr;
+  std::unique_ptr<MarketUpdateQueue> queue = nullptr;
+  std::unique_ptr<common::Logger> logger = nullptr;
+  std::unique_ptr<SnapshotSynthesizer> synth = nullptr;
   static int portCounter;
 
   void SetUp() override {
-    queue = new MarketUpdateQueue(1024);
-    logger = new common::Logger("test_snapshot.log");
+    queue = std::make_unique<MarketUpdateQueue>(1024);
+    logger = std::make_unique<common::Logger>("test_snapshot.log");
     // Fresh socket per test on loopback with a distinct port.
-    synth = new SnapshotSynthesizer(queue, "lo", "239.0.0.1",
-                                    19000 + (portCounter++));
+    synth = std::make_unique<SnapshotSynthesizer>(queue.get(), "lo",
+                                                  "239.0.0.1",
+                                                  19000 + (portCounter++));
   }
 
   void TearDown() override {
-    delete synth;
-    synth = nullptr;
-    delete logger;
-    logger = nullptr;
-    delete queue;
-    queue = nullptr;
+    synth.reset();
+    logger.reset();
+    queue.reset();
   }
 
   MarketUpdate makeUpdate(size_t seq, MarketUpdateType type, OrderId oid,

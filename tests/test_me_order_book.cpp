@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <memory>
 #include <vector>
 
 #include "common/logging.hpp"
@@ -14,40 +15,38 @@ using namespace exchange;
 // Shared engine/queues for all tests; each TEST gets a fresh isolated book.
 class MEOrderBookTest : public ::testing::Test {
 protected:
-  static ClientRequestImplQueue *reqQ;
-  static ClientResponseImplQueue *respQ;
-  static MarketUpdateImplQueue *mdQ;
-  static common::Logger *logger;
-  static MatchingEngine *engine;
+  static std::unique_ptr<ClientRequestImplQueue> reqQ;
+  static std::unique_ptr<ClientResponseImplQueue> respQ;
+  static std::unique_ptr<MarketUpdateImplQueue> mdQ;
+  static std::unique_ptr<common::Logger> logger;
+  static std::unique_ptr<MatchingEngine> engine;
 
-  MEOrderBook *book = nullptr;
+  std::unique_ptr<MEOrderBook> book = nullptr;
 
   static void SetUpTestSuite() {
-    reqQ = new ClientRequestImplQueue(4096);
-    respQ = new ClientResponseImplQueue(4096);
-    mdQ = new MarketUpdateImplQueue(4096);
-    logger = new common::Logger("test_me_order_book.log");
-    engine = new MatchingEngine(reqQ, respQ, mdQ);
+    reqQ = std::make_unique<ClientRequestImplQueue>(4096);
+    respQ = std::make_unique<ClientResponseImplQueue>(4096);
+    mdQ = std::make_unique<MarketUpdateImplQueue>(4096);
+    logger = std::make_unique<common::Logger>("test_me_order_book.log");
+    engine = std::make_unique<MatchingEngine>(reqQ.get(), respQ.get(),
+                                              mdQ.get());
   }
 
   static void TearDownTestSuite() {
-    delete engine;
-    engine = nullptr;
-    delete logger;
-    logger = nullptr;
-    delete reqQ;
-    delete mdQ;
-    delete respQ;
+    engine.reset();
+    logger.reset();
+    reqQ.reset();
+    mdQ.reset();
+    respQ.reset();
   }
 
   void SetUp() override {
     drainQueues();
-    book = new MEOrderBook(0, logger, engine);
+    book = std::make_unique<MEOrderBook>(0, logger.get(), engine.get());
   }
 
   void TearDown() override {
-    delete book;
-    book = nullptr;
+    book.reset();
     drainQueues();
   }
 
@@ -79,11 +78,11 @@ protected:
   }
 };
 
-ClientRequestImplQueue *MEOrderBookTest::reqQ = nullptr;
-ClientResponseImplQueue *MEOrderBookTest::respQ = nullptr;
-MarketUpdateImplQueue *MEOrderBookTest::mdQ = nullptr;
-common::Logger *MEOrderBookTest::logger = nullptr;
-MatchingEngine *MEOrderBookTest::engine = nullptr;
+std::unique_ptr<ClientRequestImplQueue> MEOrderBookTest::reqQ = nullptr;
+std::unique_ptr<ClientResponseImplQueue> MEOrderBookTest::respQ = nullptr;
+std::unique_ptr<MarketUpdateImplQueue> MEOrderBookTest::mdQ = nullptr;
+std::unique_ptr<common::Logger> MEOrderBookTest::logger = nullptr;
+std::unique_ptr<MatchingEngine> MEOrderBookTest::engine = nullptr;
 
 // Verifies a lone bid rests on the book with ACCEPTED followed by ADD.
 TEST_F(MEOrderBookTest, RestingBidProducesAcceptedAndAdd) {

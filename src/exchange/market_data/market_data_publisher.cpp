@@ -17,14 +17,13 @@ MarketDataPublisher::MarketDataPublisher(
              incrementalUpdateIp +
              " port:" + std::to_string(incrementalUpdatePort) +
              " error:" + std::strerror(errno));
-  m_snapshotSynthesizer = new SnapshotSynthesizer(&m_snapshotUpdateQueue, iface,
-                                                  snapshotIp, snapshotPort);
+  m_snapshotSynthesizer = std::make_unique<SnapshotSynthesizer>(
+      &m_snapshotUpdateQueue, iface, snapshotIp, snapshotPort);
 }
 
 MarketDataPublisher::~MarketDataPublisher() noexcept {
   stop();
-  delete m_snapshotSynthesizer;
-  m_snapshotSynthesizer = nullptr;
+  m_snapshotSynthesizer.reset();
 
   using namespace std::literals::chrono_literals;
   std::this_thread::sleep_for(1s);

@@ -1,4 +1,5 @@
 #include <cstdlib>
+#include <memory>
 
 #include "common/constants.hpp"
 #include "common/logging.hpp"
@@ -11,10 +12,10 @@
 
 using namespace trading;
 
-common::Logger *g_logger = nullptr;
-TradeEngine *g_tradeEngine = nullptr;
-MarketDataConsumer *g_marketDataConsumer = nullptr;
-OrderGateway *g_orderGateway = nullptr;
+std::unique_ptr<common::Logger> g_logger = nullptr;
+std::unique_ptr<TradeEngine> g_tradeEngine = nullptr;
+std::unique_ptr<MarketDataConsumer> g_marketDataConsumer = nullptr;
+std::unique_ptr<OrderGateway> g_orderGateway = nullptr;
 
 static void shutdown() {
   using namespace std::literals::chrono_literals;
@@ -23,8 +24,7 @@ static void shutdown() {
   if (g_tradeEngine) {
     g_logger->logInfo("%:% %() Destroying TradeEngine\n", __FILE__, __LINE__,
                       __FUNCTION__);
-    delete g_tradeEngine;
-    g_tradeEngine = nullptr;
+    g_tradeEngine.reset();
     g_logger->logInfo("%:% %() Destroyed TradeEngine\n", __FILE__, __LINE__,
                       __FUNCTION__);
   }
@@ -32,8 +32,7 @@ static void shutdown() {
   if (g_orderGateway) {
     g_logger->logInfo("%:% %() Destroying OrderGateway\n", __FILE__, __LINE__,
                       __FUNCTION__);
-    delete g_orderGateway;
-    g_orderGateway = nullptr;
+    g_orderGateway.reset();
     g_logger->logInfo("%:% %() Destroyed OrderGateway\n", __FILE__, __LINE__,
                       __FUNCTION__);
   }
@@ -41,8 +40,7 @@ static void shutdown() {
   if (g_marketDataConsumer) {
     g_logger->logInfo("%:% %() Destroying MarketDataConsumer\n", __FILE__,
                       __LINE__, __FUNCTION__);
-    delete g_marketDataConsumer;
-    g_marketDataConsumer = nullptr;
+    g_marketDataConsumer.reset();
     g_logger->logInfo("%:% %() Destroyed MarketDataConsumer\n", __FILE__,
                       __LINE__, __FUNCTION__);
   }
@@ -50,8 +48,7 @@ static void shutdown() {
   if (g_logger) {
     g_logger->logInfo("%:% %() Destroying Logger\n", __FILE__, __LINE__,
                       __FUNCTION__);
-    delete g_logger;
-    g_logger = nullptr;
+    g_logger.reset();
   }
 }
 
@@ -73,8 +70,8 @@ int main(int argc, char **argv) {
         clip, threshold, RiskConfig{maxOrderSize, maxPosition, maxLoss}};
   }
 
-  g_logger =
-      new common::Logger("trading_main_" + std::to_string(clientId) + ".log");
+  g_logger = std::make_unique<common::Logger>(
+      "trading_main_" + std::to_string(clientId) + ".log");
 
   g_logger->logInfo("%:% %() Starting trading client\n", __FILE__, __LINE__,
                     __FUNCTION__);
@@ -97,24 +94,24 @@ int main(int argc, char **argv) {
       common::ME_MAX_MARKET_UPDATES, common::ME_MAX_ORDER_IDS,
       common::ME_MAX_PRICE_LEVELS, common::LOG_QUEUE_SIZE);
 
-  exchange::ClientRequestImplQueue *clientRequestsQueue =
-      new exchange::ClientRequestImplQueue(ME_MAX_CLIENT_UPDATES);
+  auto clientRequestsQueue =
+      std::make_unique<exchange::ClientRequestImplQueue>(ME_MAX_CLIENT_UPDATES);
   g_logger->logInfo("%:% %() Created ClientRequestQueue capacity:%\n", __FILE__,
                     __LINE__, __FUNCTION__, ME_MAX_CLIENT_UPDATES);
 
-  exchange::ClientResponseImplQueue *clientResponsesQueue =
-      new exchange::ClientResponseImplQueue(ME_MAX_CLIENT_UPDATES);
+  auto clientResponsesQueue = std::make_unique<exchange::ClientResponseImplQueue>(
+      ME_MAX_CLIENT_UPDATES);
   g_logger->logInfo("%:% %() Created ClientResponseQueue capacity:%\n",
                     __FILE__, __LINE__, __FUNCTION__, ME_MAX_CLIENT_UPDATES);
 
-  exchange::MarketUpdateImplQueue *marketUpdateQueue =
-      new exchange::MarketUpdateImplQueue(ME_MAX_MARKET_UPDATES);
+  auto marketUpdateQueue =
+      std::make_unique<exchange::MarketUpdateImplQueue>(ME_MAX_MARKET_UPDATES);
   g_logger->logInfo("%:% %() Created MarketUpdateQueue capacity:%\n", __FILE__,
                     __LINE__, __FUNCTION__, ME_MAX_MARKET_UPDATES);
 
-  g_tradeEngine =
-      new TradeEngine(clientId, algoType, tickerConfig, clientRequestsQueue,
-                      clientResponsesQueue, marketUpdateQueue);
+  g_tradeEngine = std::make_unique<TradeEngine>(
+      clientId, algoType, tickerConfig, clientRequestsQueue.get(),
+      clientResponsesQueue.get(), marketUpdateQueue.get());
   g_tradeEngine->start();
   g_logger->logInfo("%:% %() Started TradeEngine thread\n", __FILE__, __LINE__,
                     __FUNCTION__);
@@ -128,9 +125,9 @@ int main(int argc, char **argv) {
                     __FILE__, __LINE__, __FUNCTION__, orderServerIp,
                     orderServerIface, orderServerPort);
 
-  g_orderGateway =
-      new OrderGateway(clientId, clientRequestsQueue, clientResponsesQueue,
-                       orderServerIp, orderServerIface, orderServerPort);
+  g_orderGateway = std::make_unique<OrderGateway>(
+      clientId, clientRequestsQueue.get(), clientResponsesQueue.get(),
+      orderServerIp, orderServerIface, orderServerPort);
   g_orderGateway->start();
   g_logger->logInfo("%:% %() Started OrderGateway thread\n", __FILE__, __LINE__,
                     __FUNCTION__);
@@ -146,8 +143,8 @@ int main(int argc, char **argv) {
                     __FILE__, __LINE__, __FUNCTION__, iface, snapshotIp,
                     snapshotPort, incrementalUpdateIp, incrementalUpdatePort);
 
-  g_marketDataConsumer = new MarketDataConsumer(
-      clientId, marketUpdateQueue, iface, snapshotIp, snapshotPort,
+  g_marketDataConsumer = std::make_unique<MarketDataConsumer>(
+      clientId, marketUpdateQueue.get(), iface, snapshotIp, snapshotPort,
       incrementalUpdateIp, incrementalUpdatePort);
   g_marketDataConsumer->start();
   g_logger->logInfo("%:% %() Started MarketDataConsumer thread\n", __FILE__,
@@ -211,9 +208,6 @@ int main(int argc, char **argv) {
                     __LINE__, __FUNCTION__);
 
   shutdown();
-  delete clientRequestsQueue;
-  delete clientResponsesQueue;
-  delete marketUpdateQueue;
 
   using namespace std::literals::chrono_literals;
   std::this_thread::sleep_for(1s);

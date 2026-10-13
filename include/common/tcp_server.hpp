@@ -9,6 +9,8 @@ struct TCPServer {
       : m_listenerSocket(logger), m_logger(logger) {
   }
 
+  ~TCPServer();
+
   /// Start listening for connections on the provided interface and port.
   auto listen(const std::string &iface, int port) -> void;
 

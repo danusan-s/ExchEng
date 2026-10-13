@@ -8,6 +8,8 @@
 #include "exchange/market_data/market_update.hpp"
 #include "trading/strategy/market_order.hpp"
 
+#include <memory>
+
 using namespace common;
 
 namespace trading {
@@ -66,6 +68,7 @@ private:
   Logger *m_logger = nullptr;
 };
 
-using MarketOrderBookMap = std::array<MarketOrderBook *, ME_MAX_TICKERS>;
+using MarketOrderBookMap =
+    std::array<std::unique_ptr<MarketOrderBook>, ME_MAX_TICKERS>;
 
 } // namespace trading

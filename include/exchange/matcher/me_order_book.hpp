@@ -8,6 +8,8 @@
 
 #include "me_order.hpp"
 
+#include <memory>
+
 using namespace common;
 
 namespace exchange {
@@ -73,6 +75,7 @@ private:
              Quantity *matchQty) noexcept;
 };
 
-using OrderBookHashMap = std::array<MEOrderBook *, ME_MAX_TICKERS>;
+using OrderBookHashMap =
+    std::array<std::unique_ptr<MEOrderBook>, ME_MAX_TICKERS>;
 
 } // namespace exchange

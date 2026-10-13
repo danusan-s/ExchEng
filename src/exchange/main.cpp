@@ -1,4 +1,6 @@
+#include <atomic>
 #include <csignal>
+#include <memory>
 
 #include "common/constants.hpp"
 #include "common/logging.hpp"
@@ -6,59 +8,23 @@
 #include "exchange/matcher/matching_engine.hpp"
 #include "exchange/order_server/order_server.hpp"
 
-common::Logger *g_logger = nullptr;
-exchange::MatchingEngine *g_matchingEngine = nullptr;
-exchange::OrderServer *g_orderServer = nullptr;
-exchange::MarketDataPublisher *g_marketDataPublisher = nullptr;
+std::unique_ptr<common::Logger> g_logger = nullptr;
+std::unique_ptr<exchange::MatchingEngine> g_matchingEngine = nullptr;
+std::unique_ptr<exchange::OrderServer> g_orderServer = nullptr;
+std::unique_ptr<exchange::MarketDataPublisher> g_marketDataPublisher = nullptr;
+
+std::atomic<bool> g_running{true};
 
 void signalHandler(int) {
   std::cerr
       << "\nSIGINT received. Shutting down matching engine and order server."
       << std::endl;
 
-  using namespace std::literals::chrono_literals;
-  std::this_thread::sleep_for(1s);
-
-  if (g_orderServer) {
-    g_logger->logInfo("%:% %() Destroying OrderServer\n", __FILE__, __LINE__,
-                      __FUNCTION__);
-    delete g_orderServer;
-    g_orderServer = nullptr;
-    g_logger->logInfo("%:% %() Destroyed OrderServer\n", __FILE__, __LINE__,
-                      __FUNCTION__);
-  }
-
-  if (g_matchingEngine) {
-    g_logger->logInfo("%:% %() Destroying MatchingEngine\n", __FILE__, __LINE__,
-                      __FUNCTION__);
-    delete g_matchingEngine;
-    g_matchingEngine = nullptr;
-    g_logger->logInfo("%:% %() Destroyed MatchingEngine\n", __FILE__, __LINE__,
-                      __FUNCTION__);
-  }
-
-  if (g_marketDataPublisher) {
-    g_logger->logInfo("%:% %() Destroying MarketDataPublisher\n", __FILE__,
-                      __LINE__, __FUNCTION__);
-    delete g_marketDataPublisher;
-    g_marketDataPublisher = nullptr;
-    g_logger->logInfo("%:% %() Destroyed MarketDataPublisher\n", __FILE__,
-                      __LINE__, __FUNCTION__);
-  }
-
-  g_logger->logInfo("%:% %() Destroying Logger\n", __FILE__, __LINE__,
-                    __FUNCTION__);
-  delete g_logger;
-  g_logger = nullptr;
-
-  using namespace std::literals::chrono_literals;
-  std::this_thread::sleep_for(1s);
-
-  exit(EXIT_SUCCESS);
+  g_running.store(false, std::memory_order_relaxed);
 }
 
 int main() {
-  g_logger = new common::Logger("main.log");
+  g_logger = std::make_unique<common::Logger>("main.log");
 
   const std::string iface = "lo";
   const int orderServerPort = 5000;
@@ -101,19 +67,19 @@ int main() {
   g_logger->logInfo("%:% %() Created MarketUpdateQueue capacity:%\n", __FILE__,
                     __LINE__, __FUNCTION__, ME_MAX_MARKET_UPDATES);
 
-  g_matchingEngine = new exchange::MatchingEngine(
+  g_matchingEngine = std::make_unique<exchange::MatchingEngine>(
       &clientRequestQueue, &clientResponseQueue, &marketUpdateQueue);
   g_matchingEngine->start();
   g_logger->logInfo("%:% %() Starting MatchingEngine thread\n", __FILE__,
                     __LINE__, __FUNCTION__);
 
-  g_orderServer = new exchange::OrderServer(
+  g_orderServer = std::make_unique<exchange::OrderServer>(
       &clientRequestQueue, &clientResponseQueue, iface, orderServerPort);
   g_orderServer->start();
   g_logger->logInfo("%:% %() Starting OrderServer thread\n", __FILE__, __LINE__,
                     __FUNCTION__);
 
-  g_marketDataPublisher = new exchange::MarketDataPublisher(
+  g_marketDataPublisher = std::make_unique<exchange::MarketDataPublisher>(
       &marketUpdateQueue, iface, snapshotIp, snapshotPort, incrementalUpdateIp,
       incrementalUpdatePort);
   g_marketDataPublisher->start();
@@ -123,9 +89,22 @@ int main() {
   g_logger->logInfo("%:% %() Exchange up and running, entering main loop\n",
                     __FILE__, __LINE__, __FUNCTION__);
 
-  while (true) {
+  while (g_running.load(std::memory_order_relaxed)) {
     std::this_thread::sleep_for(std::chrono::seconds(1));
   }
+
+  g_logger->logInfo("%:% %() SIGINT received, destroying components\n",
+                    __FILE__, __LINE__, __FUNCTION__);
+  g_orderServer.reset();
+  g_matchingEngine.reset();
+  g_marketDataPublisher.reset();
+
+  g_logger->logInfo("%:% %() Destroying Logger\n", __FILE__, __LINE__,
+                    __FUNCTION__);
+  g_logger.reset();
+
+  using namespace std::literals::chrono_literals;
+  std::this_thread::sleep_for(1s);
 
   return EXIT_SUCCESS;
 }

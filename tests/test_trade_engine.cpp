@@ -1,6 +1,7 @@
 #include <chrono>
 #include <gtest/gtest.h>
 
+#include <memory>
 #include <thread>
 
 #include "common/logging.hpp"
@@ -11,18 +12,20 @@ using namespace exchange;
 
 class TradeEngineTest : public ::testing::Test {
 protected:
-  ClientRequestImplQueue *outReq = nullptr;
-  ClientResponseImplQueue *inResp = nullptr;
-  MarketUpdateImplQueue *inMd = nullptr;
-  TradeEngine *engine = nullptr;
+  std::unique_ptr<ClientRequestImplQueue> outReq = nullptr;
+  std::unique_ptr<ClientResponseImplQueue> inResp = nullptr;
+  std::unique_ptr<MarketUpdateImplQueue> inMd = nullptr;
+  std::unique_ptr<TradeEngine> engine = nullptr;
   TradeEngineConfigMap cfg{};
 
   void SetUp() override {
-    outReq = new ClientRequestImplQueue(1024);
-    inResp = new ClientResponseImplQueue(1024);
-    inMd = new MarketUpdateImplQueue(1024);
+    outReq = std::make_unique<ClientRequestImplQueue>(1024);
+    inResp = std::make_unique<ClientResponseImplQueue>(1024);
+    inMd = std::make_unique<MarketUpdateImplQueue>(1024);
     cfg = TradeEngineConfigMap{};
-    engine = new TradeEngine(7, AlgoType::INVALID, cfg, outReq, inResp, inMd);
+    engine = std::make_unique<TradeEngine>(7, AlgoType::INVALID, cfg,
+                                           outReq.get(), inResp.get(),
+                                           inMd.get());
   }
 
   void TearDown() override {
@@ -32,11 +35,10 @@ protected:
       inMd->updateReadIndex();
     while (outReq->size())
       outReq->updateReadIndex();
-    delete engine;
-    engine = nullptr;
-    delete outReq;
-    delete inResp;
-    delete inMd;
+    engine.reset();
+    outReq.reset();
+    inResp.reset();
+    inMd.reset();
   }
 };
 

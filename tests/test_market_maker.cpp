@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <memory>
+
 #include "common/logging.hpp"
 #include "trading/strategy/market_maker.hpp"
 #include "trading/strategy/trade_engine.hpp"
@@ -9,32 +11,32 @@ using namespace exchange;
 
 class MarketMakerTest : public ::testing::Test {
 protected:
-  static ClientRequestImplQueue *outReq;
-  static ClientResponseImplQueue *inResp;
-  static MarketUpdateImplQueue *inMd;
-  static common::Logger *logger;
+  static std::unique_ptr<ClientRequestImplQueue> outReq;
+  static std::unique_ptr<ClientResponseImplQueue> inResp;
+  static std::unique_ptr<MarketUpdateImplQueue> inMd;
+  static std::unique_ptr<common::Logger> logger;
 
-  TradeEngine *engine = nullptr;
-  FeatureEngine *features = nullptr;
-  PositionKeeper *keeper = nullptr;
-  RiskManager *risk = nullptr;
-  OrderManager *oms = nullptr;
-  MarketMaker *maker = nullptr;
-  MarketOrderBook *book = nullptr;
+  std::unique_ptr<TradeEngine> engine = nullptr;
+  std::unique_ptr<FeatureEngine> features = nullptr;
+  std::unique_ptr<PositionKeeper> keeper = nullptr;
+  std::unique_ptr<RiskManager> risk = nullptr;
+  std::unique_ptr<OrderManager> oms = nullptr;
+  std::unique_ptr<MarketMaker> maker = nullptr;
+  std::unique_ptr<MarketOrderBook> book = nullptr;
   TradeEngineConfigMap cfg{};
 
   static void SetUpTestSuite() {
-    outReq = new ClientRequestImplQueue(4096);
-    inResp = new ClientResponseImplQueue(4096);
-    inMd = new MarketUpdateImplQueue(4096);
-    logger = new common::Logger("test_market_maker.log");
+    outReq = std::make_unique<ClientRequestImplQueue>(4096);
+    inResp = std::make_unique<ClientResponseImplQueue>(4096);
+    inMd = std::make_unique<MarketUpdateImplQueue>(4096);
+    logger = std::make_unique<common::Logger>("test_market_maker.log");
   }
 
   static void TearDownTestSuite() {
-    delete logger;
-    delete outReq;
-    delete inResp;
-    delete inMd;
+    logger.reset();
+    outReq.reset();
+    inResp.reset();
+    inMd.reset();
   }
 
   void SetUp() override {
@@ -47,28 +49,29 @@ protected:
     cfg[0].m_riskConfig.m_maxPosition = 1000;
     cfg[0].m_riskConfig.m_maxLoss = -1e9;
 
-    engine = new TradeEngine(7, AlgoType::INVALID, cfg, outReq, inResp, inMd);
-    features = new FeatureEngine(logger);
-    keeper = new PositionKeeper(logger);
-    risk = new RiskManager(keeper, cfg, logger);
-    oms = new OrderManager(engine, *risk, logger);
-    maker = new MarketMaker(engine, features, oms, cfg, logger);
-    book = new MarketOrderBook(0, logger);
-    book->setTradeEngine(engine);
+    engine = std::make_unique<TradeEngine>(7, AlgoType::INVALID, cfg,
+                                           outReq.get(), inResp.get(),
+                                           inMd.get());
+    features = std::make_unique<FeatureEngine>(logger.get());
+    keeper = std::make_unique<PositionKeeper>(logger.get());
+    risk = std::make_unique<RiskManager>(keeper.get(), cfg, logger.get());
+    oms = std::make_unique<OrderManager>(engine.get(), *risk, logger.get());
+    maker = std::make_unique<MarketMaker>(engine.get(), features.get(),
+                                          oms.get(), cfg, logger.get());
+    book = std::make_unique<MarketOrderBook>(0, logger.get());
+    book->setTradeEngine(engine.get());
   }
 
   void TearDown() override {
     // Destroy the engine before the book: the engine's position keeper holds
     // a pointer to this book's BBO and dereferences it while stopping.
-    delete maker;
-    delete oms;
-    delete risk;
-    delete keeper;
-    delete features;
-    delete engine;
-    engine = nullptr;
-    delete book;
-    book = nullptr;
+    maker.reset();
+    oms.reset();
+    risk.reset();
+    keeper.reset();
+    features.reset();
+    engine.reset();
+    book.reset();
     while (outReq->size())
       outReq->updateReadIndex();
     while (inResp->size())
@@ -92,7 +95,7 @@ protected:
   }
 
   void refreshFeatures() {
-    features->onOrderBookUpdate(0, 101, common::Side::SELL, book);
+    features->onOrderBookUpdate(0, 101, common::Side::SELL, book.get());
   }
 
   // Drains requests emitted as a side effect of building the book: the book
@@ -105,16 +108,16 @@ protected:
   }
 };
 
-ClientRequestImplQueue *MarketMakerTest::outReq = nullptr;
-ClientResponseImplQueue *MarketMakerTest::inResp = nullptr;
-MarketUpdateImplQueue *MarketMakerTest::inMd = nullptr;
-common::Logger *MarketMakerTest::logger = nullptr;
+std::unique_ptr<ClientRequestImplQueue> MarketMakerTest::outReq = nullptr;
+std::unique_ptr<ClientResponseImplQueue> MarketMakerTest::inResp = nullptr;
+std::unique_ptr<MarketUpdateImplQueue> MarketMakerTest::inMd = nullptr;
+std::unique_ptr<common::Logger> MarketMakerTest::logger = nullptr;
 
 // Verifies no orders are sent when the book is one-sided.
 TEST_F(MarketMakerTest, OneSidedBookSendsNothing) {
   addToBook(1, common::Side::BUY, 100, 10);
   refreshFeatures();
-  maker->onOrderBookUpdate(0, 100, common::Side::BUY, book);
+  maker->onOrderBookUpdate(0, 100, common::Side::BUY, book.get());
   EXPECT_EQ(outReq->size(), 0u);
 }
 
@@ -122,7 +125,7 @@ TEST_F(MarketMakerTest, OneSidedBookSendsNothing) {
 TEST_F(MarketMakerTest, AskOnlyBookSendsNothing) {
   addToBook(1, common::Side::SELL, 102, 10);
   refreshFeatures();
-  maker->onOrderBookUpdate(0, 102, common::Side::SELL, book);
+  maker->onOrderBookUpdate(0, 102, common::Side::SELL, book.get());
   EXPECT_EQ(outReq->size(), 0u);
 }
 
@@ -131,7 +134,7 @@ TEST_F(MarketMakerTest, AskOnlyBookSendsNothing) {
 TEST_F(MarketMakerTest, InvalidFairPriceSendsNothing) {
   makeTwoSidedBook();
   // No refreshFeatures(): fair price stays NaN.
-  maker->onOrderBookUpdate(0, 102, common::Side::SELL, book);
+  maker->onOrderBookUpdate(0, 102, common::Side::SELL, book.get());
   EXPECT_EQ(outReq->size(), 0u);
 }
 
@@ -140,7 +143,7 @@ TEST_F(MarketMakerTest, FairMidPostsTwoSidedQuotes) {
   makeTwoSidedBook();
   refreshFeatures(); // fair = (100*20 + 102*20)/40 = 101.
   drainOutReq();
-  maker->onOrderBookUpdate(0, 102, common::Side::SELL, book);
+  maker->onOrderBookUpdate(0, 102, common::Side::SELL, book.get());
   EXPECT_EQ(outReq->size(), 2u);
 }
 
@@ -149,7 +152,7 @@ TEST_F(MarketMakerTest, QuotesUseClipFromConfig) {
   makeTwoSidedBook();
   refreshFeatures();
   drainOutReq();
-  maker->onOrderBookUpdate(0, 102, common::Side::SELL, book);
+  maker->onOrderBookUpdate(0, 102, common::Side::SELL, book.get());
   ASSERT_EQ(outReq->size(), 2u);
   for (auto *r = outReq->getNextToRead(); r; r = outReq->getNextToRead()) {
     EXPECT_EQ(r->m_quantity, 10u);
@@ -164,7 +167,7 @@ TEST_F(MarketMakerTest, NearMidShiftsQuotesByOne) {
   makeTwoSidedBook();
   refreshFeatures(); // fair 101.
   drainOutReq();
-  maker->onOrderBookUpdate(0, 102, common::Side::SELL, book);
+  maker->onOrderBookUpdate(0, 102, common::Side::SELL, book.get());
   ASSERT_EQ(outReq->size(), 2u);
   bool sawBid99 = false;
   bool sawAsk103 = false;
@@ -187,9 +190,9 @@ TEST_F(MarketMakerTest, FarFairHoldsQuotesAtBbo) {
   addToBook(2, common::Side::BUY, 100, 10);
   addToBook(3, common::Side::SELL, 200, 10);
   addToBook(4, common::Side::SELL, 200, 10);
-  features->onOrderBookUpdate(0, 200, common::Side::SELL, book);
+  features->onOrderBookUpdate(0, 200, common::Side::SELL, book.get());
   drainOutReq();
-  maker->onOrderBookUpdate(0, 200, common::Side::SELL, book);
+  maker->onOrderBookUpdate(0, 200, common::Side::SELL, book.get());
   ASSERT_EQ(outReq->size(), 2u);
   bool sawBid100 = false;
   bool sawAsk200 = false;
@@ -213,7 +216,7 @@ TEST_F(MarketMakerTest, TradeUpdateSendsNothing) {
                      101,
                      5,
                      common::INVALID_PRIORITY};
-  maker->onTradeUpdate(&t, book);
+  maker->onTradeUpdate(&t, book.get());
   EXPECT_EQ(outReq->size(), 0u);
 }
 
@@ -222,7 +225,7 @@ TEST_F(MarketMakerTest, OrderUpdateForwardedToOrderManager) {
   makeTwoSidedBook();
   refreshFeatures();
   drainOutReq();
-  maker->onOrderBookUpdate(0, 102, common::Side::SELL, book);
+  maker->onOrderBookUpdate(0, 102, common::Side::SELL, book.get());
   ASSERT_EQ(outReq->size(), 2u);
   // Capture the actual BUY order id issued instead of assuming id 1.
   OrderId buyId = INVALID_ORDER_ID;

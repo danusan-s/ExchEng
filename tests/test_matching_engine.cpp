@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <memory>
+
 #include "common/logging.hpp"
 #include "exchange/matcher/matching_engine.hpp"
 
@@ -8,28 +10,27 @@ using namespace exchange;
 // Shared engine; each test uses a distinct ticker to stay isolated.
 class MatchingEngineTest : public ::testing::Test {
 protected:
-  static ClientRequestImplQueue *reqQ;
-  static ClientResponseImplQueue *respQ;
-  static MarketUpdateImplQueue *mdQ;
-  static common::Logger *logger;
-  static MatchingEngine *engine;
+  static std::unique_ptr<ClientRequestImplQueue> reqQ;
+  static std::unique_ptr<ClientResponseImplQueue> respQ;
+  static std::unique_ptr<MarketUpdateImplQueue> mdQ;
+  static std::unique_ptr<common::Logger> logger;
+  static std::unique_ptr<MatchingEngine> engine;
 
   static void SetUpTestSuite() {
-    reqQ = new ClientRequestImplQueue(4096);
-    respQ = new ClientResponseImplQueue(4096);
-    mdQ = new MarketUpdateImplQueue(4096);
-    logger = new common::Logger("test_matching_engine.log");
-    engine = new MatchingEngine(reqQ, respQ, mdQ);
+    reqQ = std::make_unique<ClientRequestImplQueue>(4096);
+    respQ = std::make_unique<ClientResponseImplQueue>(4096);
+    mdQ = std::make_unique<MarketUpdateImplQueue>(4096);
+    logger = std::make_unique<common::Logger>("test_matching_engine.log");
+    engine = std::make_unique<MatchingEngine>(reqQ.get(), respQ.get(),
+                                              mdQ.get());
   }
 
   static void TearDownTestSuite() {
-    delete engine;
-    engine = nullptr;
-    delete logger;
-    logger = nullptr;
-    delete reqQ;
-    delete mdQ;
-    delete respQ;
+    engine.reset();
+    logger.reset();
+    reqQ.reset();
+    mdQ.reset();
+    respQ.reset();
   }
 
   void SetUp() override {
@@ -47,11 +48,11 @@ protected:
   }
 };
 
-ClientRequestImplQueue *MatchingEngineTest::reqQ = nullptr;
-ClientResponseImplQueue *MatchingEngineTest::respQ = nullptr;
-MarketUpdateImplQueue *MatchingEngineTest::mdQ = nullptr;
-common::Logger *MatchingEngineTest::logger = nullptr;
-MatchingEngine *MatchingEngineTest::engine = nullptr;
+std::unique_ptr<ClientRequestImplQueue> MatchingEngineTest::reqQ = nullptr;
+std::unique_ptr<ClientResponseImplQueue> MatchingEngineTest::respQ = nullptr;
+std::unique_ptr<MarketUpdateImplQueue> MatchingEngineTest::mdQ = nullptr;
+std::unique_ptr<common::Logger> MatchingEngineTest::logger = nullptr;
+std::unique_ptr<MatchingEngine> MatchingEngineTest::engine = nullptr;
 
 // Verifies a NEW request routes to the book and yields ACCEPTED + ADD.
 TEST_F(MatchingEngineTest, NewRequestProducesAcceptedAndAdd) {
