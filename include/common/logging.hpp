@@ -14,7 +14,7 @@
 namespace common {
 
 inline constexpr size_t LOG_QUEUE_SIZE = 8 * 1024 * 1024;
-inline constexpr size_t LOG_BUFFERED_STRING_SIZE = 256;
+inline constexpr size_t LOG_BUFFERED_STRING_SIZE = 8;
 
 enum class LogLevel : int8_t {
   DATA = 0,
@@ -66,6 +66,7 @@ struct LogElement {
   union {
     Nanos t;
     char c;
+    char s[LOG_BUFFERED_STRING_SIZE];
     int i;
     long l;
     long long ll;
@@ -80,7 +81,7 @@ struct LogElement {
 class Logger final {
 public:
   explicit Logger(const std::string &file_name)
-      : m_fileName("logs/" + file_name), m_buffer(64), m_queue(LOG_QUEUE_SIZE) {
+      : m_fileName("logs/" + file_name), m_queue(LOG_QUEUE_SIZE) {
     std::error_code ec;
     std::filesystem::create_directories(
         std::filesystem::path(m_fileName).parent_path(), ec);
@@ -181,10 +182,7 @@ private:
             m_file << next->u_.d;
             break;
           case LogType::STRING:
-            m_file << m_buffer[next->u_.i].data();
-            m_bufferUsed.fetch_or(
-                1ull << next->u_.i,
-                std::memory_order_release); // Mark buffer as free
+            m_file << next->u_.s;
             break;
           case LogType::LOG_LEVEL:
             auto logLevelStr = getLogLevelString(next->u_.i);
@@ -243,46 +241,33 @@ private:
     pushValue(LogElement{LogType::DOUBLE, {.d = value}});
   }
 
-  int getFreeBufferIndex() noexcept {
-    auto bufferUsed = m_bufferUsed.load(std::memory_order_acquire);
-    if (bufferUsed != 0) {
-      unsigned index = std::countr_zero(bufferUsed);
-      m_bufferUsed.fetch_and(~(1ull << index),
-                             std::memory_order_release); // Mark buffer as used
-      return index;
+  void pushValue(const char *value, size_t length) noexcept {
+    for (size_t i = 0; i < length; i += LOG_BUFFERED_STRING_SIZE - 1) {
+      LogElement logElement{LogType::STRING, {}};
+      size_t chunkSize = std::min(length - i, LOG_BUFFERED_STRING_SIZE - 1);
+      std::memcpy(logElement.u_.s, value + i, chunkSize);
+      logElement.u_.s[chunkSize] = '\0';
+      pushValue(logElement);
     }
-    return -1; // No free buffer available
   }
 
   void pushValue(const char *value) noexcept {
-    auto index = getFreeBufferIndex();
-    if (index == -1) [[unlikely]] {
-      while (*value) {
-        pushValue(*value++);
-      }
-      return;
-    }
-
-    std::strncpy(m_buffer[index].data(), value, m_buffer[index].size() - 1);
-    m_buffer[index][m_buffer[index].size() - 1] =
-        '\0'; // Ensure null termination
-
-    pushValue(LogElement{LogType::STRING, {.i = index}});
+    pushValue(value, std::strlen(value));
   }
 
   void pushValue(const std::string &value) noexcept {
-    pushValue(value.c_str());
-  }
-
-  void pushValue(const std::string_view &value) noexcept {
-    pushValue(value.data());
+    pushValue(value.c_str(), value.size());
   }
 
   template <typename T, typename... A>
   void log(const char *s, const T &value, A... args) noexcept {
-    while (*s) {
-      if (*s == '%') {
-        if (*(s + 1) == '%')
+    size_t len = 0;
+    while (*(s + len)) {
+      if (*(s + len) == '%') {
+        pushValue(s, len); // push the string before the % to the log queue.
+        s += len;          // move the pointer to the % character.
+        len = 0;           // reset the length counter to 0.
+        if (*(s + len + 1) == '%')
             [[unlikely]] { // to allow %% -> % escape character.
           ++s;
         } else {
@@ -292,8 +277,11 @@ private:
           return;
         }
       }
-      pushValue(*s++);
+      ++len;
     }
+    if (len > 0) {
+      pushValue(s, len); // push the remaining string to the log queue.
+    };
     pushValue("ERROR: extra arguments provided to log()\n");
     using namespace std::literals::chrono_literals;
     std::this_thread::sleep_for(1s);
@@ -318,10 +306,6 @@ private:
 private:
   const std::string m_fileName;
   std::ofstream m_file;
-
-  std::vector<std::array<char, LOG_BUFFERED_STRING_SIZE>> m_buffer;
-  std::atomic<uint64_t> m_bufferUsed =
-      UINT64_MAX; // Bitset to track used buffers (1 = free, 0 = used)
 
   std::string m_timeStr;
 
