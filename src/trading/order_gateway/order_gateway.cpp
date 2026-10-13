@@ -73,7 +73,7 @@ void OrderGateway::recvCallback(common::TCPSocket *socket,
          i += sizeof(exchange::OMClientResponse)) {
       auto clientResp = reinterpret_cast<exchange::OMClientResponse *>(
           socket->m_inboundData.data() + i);
-      m_logger.logInfo("%:% %() Received client response: %\n", __FILE__,
+      m_logger.logData("%:% %() Received client response: %\n", __FILE__,
                        __LINE__, __FUNCTION__, clientResp->toString());
       if (clientResp->m_response.m_clientId != m_clientId) {
         m_logger.logError(

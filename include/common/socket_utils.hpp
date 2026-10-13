@@ -130,7 +130,7 @@ inline bool setMulticastIf(int fd, const std::string &ifaceIp) {
                                       const SocketCfg &socketCfg) {
   const auto ip =
       socketCfg.m_ip.empty() ? getIfaceIP(socketCfg.m_iface) : socketCfg.m_ip;
-  logger.logData("%:% %() cfg:%\n", __FILE__, __LINE__, __FUNCTION__,
+  logger.logInfo("%:% %() cfg:%\n", __FILE__, __LINE__, __FUNCTION__,
                  socketCfg.toString());
 
   const int inputFlags = (socketCfg.m_isListening ? AI_PASSIVE : 0) |

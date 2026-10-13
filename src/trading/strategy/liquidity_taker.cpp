@@ -37,7 +37,7 @@ void LiquidityTaker::onOrderBookUpdate(TickerId tickerId, Price price,
 
 void LiquidityTaker::onTradeUpdate(const exchange::MEMarketUpdate *marketUpdate,
                                    const MarketOrderBook *orderBook) noexcept {
-  m_logger->logInfo("%:% %() Received trade update %\n", __FILE__, __LINE__,
+  m_logger->logData("%:% %() Received trade update %\n", __FILE__, __LINE__,
                     __FUNCTION__, marketUpdate->toString());
   const auto bbo = orderBook->getBBO();
   const auto aggQtyRatio = m_featureEngine->getAggresiveTradeQtyRatio();
@@ -47,7 +47,7 @@ void LiquidityTaker::onTradeUpdate(const exchange::MEMarketUpdate *marketUpdate,
   // today (NaN >= threshold is false either way), but this states the intent.
   if (bbo->m_bidPrice != INVALID_PRICE && bbo->m_askPrice != INVALID_PRICE &&
       !std::isnan(aggQtyRatio)) [[likely]] {
-    m_logger->logInfo("%:% %() % aggresiveTradeQtyRatio: %\n", __FILE__,
+    m_logger->logData("%:% %() % aggresiveTradeQtyRatio: %\n", __FILE__,
                       __LINE__, __FUNCTION__, bbo->toString(), aggQtyRatio);
 
     const auto clip = m_tickerConfig.at(marketUpdate->m_tickerId).m_clip;
@@ -67,7 +67,7 @@ void LiquidityTaker::onTradeUpdate(const exchange::MEMarketUpdate *marketUpdate,
 
 void LiquidityTaker::onOrderUpdate(
     const exchange::MEClientResponse *clientResponse) noexcept {
-  m_logger->logInfo("%:% %() Received order update %\n", __FILE__, __LINE__,
+  m_logger->logData("%:% %() Received order update %\n", __FILE__, __LINE__,
                     __FUNCTION__, clientResponse->toString());
   m_orderManager->onOrderUpdate(clientResponse);
 }

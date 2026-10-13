@@ -29,7 +29,7 @@ void OrderManager::newOrder(OMOrder *order, TickerId tickerId, Side side,
                    price,    qty,           OMOrderState::PENDING_NEW};
   ++m_nextOrderId;
 
-  m_logger->logInfo("%:% %() Sent new order % for %\n", __FILE__, __LINE__,
+  m_logger->logData("%:% %() Sent new order % for %\n", __FILE__, __LINE__,
                     __FUNCTION__, newRequest.toString(), order->toString());
 }
 
@@ -46,7 +46,7 @@ void OrderManager::cancelOrder(OMOrder *order) noexcept {
   m_tradeEngine->sendClientRequest(&cancelRequest);
   order->m_state = OMOrderState::PENDING_CANCEL;
 
-  m_logger->logInfo("%:% %() Sent cancel order % for %\n", __FILE__, __LINE__,
+  m_logger->logData("%:% %() Sent cancel order % for %\n", __FILE__, __LINE__,
                     __FUNCTION__, cancelRequest.toString(), order->toString());
 }
 
@@ -96,12 +96,12 @@ void OrderManager::moveOrders(TickerId tickerId, Price bidPrice, Price askPrice,
 
 void OrderManager::onOrderUpdate(
     const exchange::MEClientResponse *clientResponse) noexcept {
-  m_logger->logInfo("%:% %() Received order update %\n", __FILE__, __LINE__,
+  m_logger->logData("%:% %() Received order update %\n", __FILE__, __LINE__,
                     __FUNCTION__, clientResponse->toString());
   auto &order = m_tickerSideOrders.at(clientResponse->m_tickerId)
                     .at(sideToIndex(clientResponse->m_side));
 
-  m_logger->logInfo("%:% %() Orders before update: %\n", __FILE__, __LINE__,
+  m_logger->logData("%:% %() Orders before update: %\n", __FILE__, __LINE__,
                     __FUNCTION__, order.toString());
 
   switch (clientResponse->m_type) {

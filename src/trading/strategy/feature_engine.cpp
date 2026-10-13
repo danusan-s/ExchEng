@@ -34,8 +34,8 @@ void FeatureEngine::onTradeUpdate(const exchange::MEMarketUpdate *marketUpdate,
         (marketUpdate->m_side == Side::BUY ? bbo->m_askQty : bbo->m_bidQty);
   }
 
-  m_logger->logInfo("%:% %() % marketPrice=% "
-                    "aggresiveTradeQtyRatio=%\n",
+  m_logger->logData("%:% %() % marketPrice=% "
+                     "aggresiveTradeQtyRatio=%\n",
                     __FILE__, __LINE__, __FUNCTION__, marketUpdate->toString(),
                     m_marketPrice, m_aggresiveTradeQtyRatio);
 }

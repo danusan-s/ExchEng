@@ -78,7 +78,7 @@ void OrderServer::run() noexcept {
 }
 
 void OrderServer::recvCallback(TCPSocket *socket, Nanos rxTime) noexcept {
-  m_logger.logData("%:% %() Received data from socket % at time %\n",
+  m_logger.logInfo("%:% %() Received data from socket % at time %\n",
                    __FILE__, __LINE__, __FUNCTION__, socket->m_socketFd,
                    rxTime);
 
@@ -129,7 +129,7 @@ void OrderServer::recvCallback(TCPSocket *socket, Nanos rxTime) noexcept {
 }
 
 void OrderServer::recvFinishedCallback() noexcept {
-  m_logger.logData("%:% %() Finished processing received data\n", __FILE__,
+  m_logger.logInfo("%:% %() Finished processing received data\n", __FILE__,
                    __LINE__, __FUNCTION__);
   m_fifoSequencer.sequenceAndPublish();
 }

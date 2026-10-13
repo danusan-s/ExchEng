@@ -44,7 +44,7 @@ auto TCPSocket::sendAndRecv() noexcept -> bool {
 
     const auto userTime = getCurrentNanos();
 
-    m_logger.logData("%:% %() read socket:% len:% utime:% ktime:% diff:%\n",
+    m_logger.logInfo("%:% %() read socket:% len:% utime:% ktime:% diff:%\n",
                      __FILE__, __LINE__, __FUNCTION__, m_socketFd,
                      m_nextReceiveValidIndex, userTime, kernelTime,
                      (userTime - kernelTime));
@@ -55,7 +55,7 @@ auto TCPSocket::sendAndRecv() noexcept -> bool {
     // Non-blocking call to send data.
     const auto n = ::send(m_socketFd, m_outboundData.data(),
                           m_nextSendValidIndex, MSG_DONTWAIT | MSG_NOSIGNAL);
-    m_logger.logData("%:% %() send socket:% len:%\n", __FILE__, __LINE__,
+    m_logger.logInfo("%:% %() send socket:% len:%\n", __FILE__, __LINE__,
                      __FUNCTION__,
                      m_socketFd, n);
   }

@@ -86,7 +86,7 @@ void TradeEngine::stop() {
     std::this_thread::sleep_for(10ms);
   }
 
-  m_logger.logInfo("%:% %() Positions\n%\n", __FILE__, __LINE__, __FUNCTION__,
+  m_logger.logData("%:% %() Positions\n%\n", __FILE__, __LINE__, __FUNCTION__,
                    m_positionKeeper.toString());
 
   m_running.store(false, std::memory_order_relaxed);
@@ -100,7 +100,7 @@ void TradeEngine::run() noexcept {
     for (auto clientResp = m_incomingClientResponses->getNextToRead();
          clientResp != nullptr;
          clientResp = m_incomingClientResponses->getNextToRead()) {
-      m_logger.logInfo("%:% %() Received client response: %\n", __FILE__,
+      m_logger.logData("%:% %() Received client response: %\n", __FILE__,
                        __LINE__, __FUNCTION__, clientResp->toString());
       onOrderUpdate(clientResp);
       m_incomingClientResponses->updateReadIndex();
@@ -109,7 +109,7 @@ void TradeEngine::run() noexcept {
     for (auto marketUpdate = m_incomingMarketUpdates->getNextToRead();
          marketUpdate != nullptr;
          marketUpdate = m_incomingMarketUpdates->getNextToRead()) {
-      m_logger.logInfo("%:% %() Received market update: %\n", __FILE__,
+      m_logger.logData("%:% %() Received market update: %\n", __FILE__,
                        __LINE__, __FUNCTION__, marketUpdate->toString());
       ASSERT(marketUpdate->m_tickerId < m_tickerOrderBooks.size(),
              "Invalid tickerId: " + std::to_string(marketUpdate->m_tickerId));
@@ -166,13 +166,13 @@ void TradeEngine::defaultAlgoOnOrderBookUpdate(
 void TradeEngine::defaultAlgoOnTradeUpdate(
     const exchange::MEMarketUpdate *marketUpdate,
     const MarketOrderBook *) noexcept {
-  m_logger.logInfo("%:% %() Received trade update %\n", __FILE__, __LINE__,
+  m_logger.logData("%:% %() Received trade update %\n", __FILE__, __LINE__,
                    __FUNCTION__, marketUpdate->toString());
 }
 
 void TradeEngine::defaultAlgoOnOrderUpdate(
     const exchange::MEClientResponse *clientResponse) noexcept {
-  m_logger.logInfo("%:% %() Received order update %\n", __FILE__, __LINE__,
+  m_logger.logData("%:% %() Received order update %\n", __FILE__, __LINE__,
                    __FUNCTION__, clientResponse->toString());
 }
 

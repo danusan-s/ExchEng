@@ -66,7 +66,7 @@ void PositionInfo::addFill(const exchange::MEClientResponse *clientResponse,
 
   m_totalPnL = m_realPnL + m_unrealPnL;
 
-  logger->logInfo("%:% %() % %\n", __FILE__, __LINE__, __FUNCTION__, toString(),
+  logger->logData("%:% %() % %\n", __FILE__, __LINE__, __FUNCTION__, toString(),
                   clientResponse->toString());
 }
 
@@ -90,7 +90,7 @@ void PositionInfo::updateBBO(const BBO *bbo, Logger *logger) noexcept {
     m_totalPnL = m_realPnL + m_unrealPnL;
 
     if (m_totalPnL != oldTotalPnL) {
-      logger->logInfo("%:% %() % %\n", __FILE__, __LINE__, __FUNCTION__,
+      logger->logData("%:% %() % %\n", __FILE__, __LINE__, __FUNCTION__,
                       toString(), bbo->toString());
     }
   }

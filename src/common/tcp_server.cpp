@@ -53,13 +53,13 @@ auto TCPServer::poll() noexcept -> void {
     // Check for new connections.
     if (event.events & EPOLLIN) {
       if (socket == &m_listenerSocket) {
-        m_logger.logData("%:% %() EPOLLIN listener_socket:%\n", __FILE__,
+        m_logger.logInfo("%:% %() EPOLLIN listener_socket:%\n", __FILE__,
                          __LINE__, __FUNCTION__,
                          socket->m_socketFd);
         haveNewConnection = true;
         continue;
       }
-      m_logger.logData("%:% %() EPOLLIN socket:%\n", __FILE__, __LINE__,
+      m_logger.logInfo("%:% %() EPOLLIN socket:%\n", __FILE__, __LINE__,
                        __FUNCTION__,
                        socket->m_socketFd);
       if (std::find(m_receiveSockets.begin(), m_receiveSockets.end(), socket) ==
@@ -68,7 +68,7 @@ auto TCPServer::poll() noexcept -> void {
     }
 
     if (event.events & EPOLLOUT) {
-      m_logger.logData("%:% %() EPOLLOUT socket:%\n", __FILE__, __LINE__,
+      m_logger.logInfo("%:% %() EPOLLOUT socket:%\n", __FILE__, __LINE__,
                        __FUNCTION__,
                        socket->m_socketFd);
       if (std::find(m_sendSockets.begin(), m_sendSockets.end(), socket) ==

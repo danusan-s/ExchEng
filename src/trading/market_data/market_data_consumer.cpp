@@ -142,7 +142,7 @@ void MarketDataConsumer::queueMessage(
     m_queuedIncrementalUpdates[marketUpdate->m_seqNum] =
         marketUpdate->m_marketUpdate;
   }
-  m_logger.logData("%:% %() Size snapshot queue: % incremental queue: %.\n",
+  m_logger.logInfo("%:% %() Size snapshot queue: % incremental queue: %.\n",
                    __FILE__, __LINE__, __FUNCTION__,
                    m_queuedSnapshotUpdates.size(),
                    m_queuedIncrementalUpdates.size());
