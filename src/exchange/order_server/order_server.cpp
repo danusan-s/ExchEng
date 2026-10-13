@@ -9,7 +9,7 @@ OrderServer::OrderServer(ClientRequestImplQueue *clientRequestQueue,
                          ClientResponseImplQueue *clientResponseQueue,
                          const std::string &iface, int port) noexcept
     : m_iface(iface), m_port(port), m_clientResponseQueue(clientResponseQueue),
-      m_logger("order_server.log"), m_tcpServer(m_logger),
+      m_logger("exchange_order_server.log"), m_tcpServer(m_logger),
       m_fifoSequencer(clientRequestQueue, &m_logger) {
   m_cidNextOutSeqNum.fill(1);
   m_cidNextInSeqNum.fill(1);

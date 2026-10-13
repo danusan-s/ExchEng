@@ -11,7 +11,8 @@ MatchingEngine::MatchingEngine(
     MarketUpdateImplQueue *marketUpdateQueue) noexcept
     : m_clientRequestQueue(clientRequestQueue),
       m_clientResponseQueue(clientResponseQueue),
-      m_marketUpdateQueue(marketUpdateQueue), m_logger("matching_engine.log") {
+      m_marketUpdateQueue(marketUpdateQueue),
+      m_logger("exchange_matching_engine.log") {
   for (size_t i = 0; i < m_tickerOrderBooks.size(); ++i) {
     m_tickerOrderBooks.at(i) = std::make_unique<MEOrderBook>(
         static_cast<TickerId>(i), &m_logger, this);

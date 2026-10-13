@@ -24,7 +24,7 @@ void signalHandler(int) {
 }
 
 int main() {
-  g_logger = std::make_unique<common::Logger>("main.log");
+  g_logger = std::make_unique<common::Logger>("exchange_main.log");
 
   const std::string iface = "lo";
   const int orderServerPort = 5000;

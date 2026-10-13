@@ -22,7 +22,7 @@ inline auto rdtsc() noexcept {
 #define END_MEASURE(TAG, LOGGER)                                               \
   do {                                                                         \
     const auto end = common::rdtsc();                                          \
-    LOGGER.logDebug("RDTSC " #TAG "  %\n", end - TAG);                         \
+    LOGGER.logDebug("RDTSC " #TAG " %\n", end - TAG);                          \
   } while (false)
 
 // Wrapper macro just to print the current time in nanoseconds

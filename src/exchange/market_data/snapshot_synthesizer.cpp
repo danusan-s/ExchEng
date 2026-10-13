@@ -8,7 +8,7 @@ SnapshotSynthesizer::SnapshotSynthesizer(MarketUpdateQueue *snapshotUpdateQueue,
                                          const std::string &ip,
                                          int port) noexcept
     : m_snapshotUpdateQueue(snapshotUpdateQueue),
-      m_logger("snapshot_synthesizer.log"), m_snapshotSocket(m_logger),
+      m_logger("exchange_snapshot_synthesizer.log"), m_snapshotSocket(m_logger),
       m_orderPool(ME_MAX_ORDER_IDS) {
   ASSERT(m_snapshotSocket.init(ip, iface, port, false) >= 0,
          "Failed to initialize snapshot multicast socket. ip:" + ip + " port:" +
@@ -27,7 +27,7 @@ SnapshotSynthesizer::~SnapshotSynthesizer() noexcept {
 void SnapshotSynthesizer::start() {
   m_running.store(true, std::memory_order_relaxed);
   auto thread = common::createAndStartThread(-1, "SnapshotSynthesizer",
-                                                  [this]() { run(); });
+                                             [this]() { run(); });
   ASSERT(thread != nullptr, "Failed to start SnapshotSynthesizer thread.");
   thread->detach();
 }

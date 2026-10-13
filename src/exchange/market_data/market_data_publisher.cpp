@@ -9,7 +9,7 @@ MarketDataPublisher::MarketDataPublisher(
     const std::string &snapshotIp, int snapshotPort,
     const std::string &incrementalUpdateIp, int incrementalUpdatePort) noexcept
     : m_outgoingUpdateQueue(outgoingUpdateQueue),
-      m_logger("market_data_publisher.log"),
+      m_logger("exchange_market_data_publisher.log"),
       m_incrementalUpdateSocket(m_logger), m_running(false),
       m_snapshotUpdateQueue(ME_MAX_MARKET_UPDATES) {
   ASSERT(m_incrementalUpdateSocket.init(incrementalUpdateIp, iface,
