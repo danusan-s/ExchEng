@@ -14,7 +14,9 @@
 namespace common {
 
 inline constexpr size_t LOG_QUEUE_SIZE = 8 * 1024 * 1024;
-inline constexpr size_t LOG_BUFFERED_STRING_SIZE = 8;
+inline constexpr size_t LOG_BUFFERED_STRING_SIZE =
+    8; // Memory to speed tradeoff, 8 is no wasted mem but still faster than
+       // old single byte char, higher value waste mem but faster
 
 enum class LogLevel : int8_t {
   DATA = 0,
@@ -58,7 +60,8 @@ enum class LogType : int8_t {
   FLOAT = 8,
   DOUBLE = 9,
   STRING = 10,
-  LOG_LEVEL = 11,
+  LOG_LEVEL = 11, // Seperate because ansi coding has
+                  // \0 terminator so can treat as string
 };
 
 struct LogElement {
@@ -181,9 +184,12 @@ private:
           case LogType::DOUBLE:
             m_file << next->u_.d;
             break;
-          case LogType::STRING:
-            m_file << next->u_.s;
-            break;
+          case LogType::STRING: {
+            for (size_t i = 0;
+                 i < LOG_BUFFERED_STRING_SIZE && next->u_.s[i] != '\0'; ++i) {
+              m_file << next->u_.s[i];
+            }
+          } break;
           case LogType::LOG_LEVEL:
             auto logLevelStr = getLogLevelString(next->u_.i);
             m_file << logLevelStr;
@@ -242,11 +248,13 @@ private:
   }
 
   void pushValue(const char *value, size_t length) noexcept {
-    for (size_t i = 0; i < length; i += LOG_BUFFERED_STRING_SIZE - 1) {
+    for (size_t i = 0; i < length; i += LOG_BUFFERED_STRING_SIZE) {
       LogElement logElement{LogType::STRING, {}};
-      size_t chunkSize = std::min(length - i, LOG_BUFFERED_STRING_SIZE - 1);
+      size_t chunkSize = std::min(length - i, LOG_BUFFERED_STRING_SIZE);
       std::memcpy(logElement.u_.s, value + i, chunkSize);
-      logElement.u_.s[chunkSize] = '\0';
+      if (chunkSize < LOG_BUFFERED_STRING_SIZE) {
+        logElement.u_.s[chunkSize] = '\0';
+      }
       pushValue(logElement);
     }
   }
