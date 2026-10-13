@@ -28,4 +28,21 @@ This part is WIP, but this is the general plan
 - Subscribe to market data
 - Subscribe to snapshots
 
+### Build and Run
+
+```bash
+make build
+```
+
+This project is highly memory intensive. You might need to drop the constraints in `include/common/constants.hpp`.
+
+Run the exchange engine:
+```bash
+make run_exchange
+```
+
+Run the client script:
+```bash
+make run_client
+```
 

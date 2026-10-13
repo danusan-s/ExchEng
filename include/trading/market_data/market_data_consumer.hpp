@@ -37,7 +37,7 @@ public:
                     const exchange::MDPMarketUpdate *marketUpdate);
 
 private:
-  size_t m_nextIncomingSeqNum = 0;
+  size_t m_nextIncomingSeqNum = 1;
 
   // Queue to pass market updates to the trading engine.
   exchange::MarketUpdateQueue *m_marketUpdateQueue = nullptr;
