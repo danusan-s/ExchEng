@@ -60,7 +60,7 @@ void MarketMaker::onOrderBookUpdate(TickerId tickerId, Price price, Side side,
   }
 }
 
-void MarketMaker::onTradeUpdate(const exchange::MEMarketUpdate *marketUpdate,
+void MarketMaker::onTradeUpdate(const exchange::MarketUpdateImpl *marketUpdate,
                                 const MarketOrderBook *) noexcept {
   m_logger->logData("%:% %() Received trade update %\n", __FILE__, __LINE__,
                     __FUNCTION__, marketUpdate->toString());
@@ -68,7 +68,7 @@ void MarketMaker::onTradeUpdate(const exchange::MEMarketUpdate *marketUpdate,
 }
 
 void MarketMaker::onOrderUpdate(
-    const exchange::MEClientResponse *clientResponse) noexcept {
+    const exchange::ClientResponseImpl *clientResponse) noexcept {
   m_logger->logData("%:% %() Received order update %\n", __FILE__, __LINE__,
                     __FUNCTION__, clientResponse->toString());
   m_orderManager->onOrderUpdate(clientResponse);

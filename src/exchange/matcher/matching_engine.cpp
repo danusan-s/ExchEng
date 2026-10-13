@@ -3,9 +3,10 @@
 
 namespace exchange {
 
-MatchingEngine::MatchingEngine(ClientRequestQueue *clientRequestQueue,
-                               ClientResponseQueue *clientResponseQueue,
-                               MarketUpdateQueue *marketUpdateQueue) noexcept
+MatchingEngine::MatchingEngine(
+    ClientRequestImplQueue *clientRequestQueue,
+    ClientResponseImplQueue *clientResponseQueue,
+    MarketUpdateImplQueue *marketUpdateQueue) noexcept
     : m_clientRequestQueue(clientRequestQueue),
       m_clientResponseQueue(clientResponseQueue),
       m_marketUpdateQueue(marketUpdateQueue), m_logger("matching_engine.log") {
@@ -51,8 +52,7 @@ void MatchingEngine::run() noexcept {
     const auto meClientRequest = m_clientRequestQueue->getNextToRead();
     if (meClientRequest) [[likely]] {
       m_logger.logData("%:% %() Processing %\n", __FILE__, __LINE__,
-                       __FUNCTION__,
-                       meClientRequest->toString());
+                       __FUNCTION__, meClientRequest->toString());
       processClientRequest(meClientRequest);
       m_clientRequestQueue->updateReadIndex();
     }
@@ -63,7 +63,7 @@ void MatchingEngine::run() noexcept {
 }
 
 void MatchingEngine::processClientRequest(
-    const MEClientRequest *meClientRequest) noexcept {
+    const ClientRequestImpl *meClientRequest) noexcept {
   auto orderBook = m_tickerOrderBooks[meClientRequest->m_tickerId];
   switch (meClientRequest->m_type) {
     case exchange::ClientRequestType::NEW: {
@@ -77,15 +77,15 @@ void MatchingEngine::processClientRequest(
                         meClientRequest->m_tickerId);
     } break;
     default:
-      m_logger.logError("%:% %() Unknown request type: %\n", __FILE__,
-                       __LINE__, __FUNCTION__,
-                       clientRequestTypeToString(meClientRequest->m_type));
+      m_logger.logError("%:% %() Unknown request type: %\n", __FILE__, __LINE__,
+                        __FUNCTION__,
+                        clientRequestTypeToString(meClientRequest->m_type));
       break;
   }
 }
 
 void MatchingEngine::sendClientResponse(
-    const MEClientResponse *meClientResponse) noexcept {
+    const ClientResponseImpl *meClientResponse) noexcept {
   m_logger.logData("%:% %() Sending %\n", __FILE__, __LINE__, __FUNCTION__,
                    meClientResponse->toString());
   auto nextWriteIndex = m_clientResponseQueue->getNextToWriteTo();
@@ -94,7 +94,7 @@ void MatchingEngine::sendClientResponse(
 }
 
 void MatchingEngine::sendMarketUpdate(
-    const MEMarketUpdate *meMarketUpdate) noexcept {
+    const MarketUpdateImpl *meMarketUpdate) noexcept {
   m_logger.logData("%:% %() Sending %\n", __FILE__, __LINE__, __FUNCTION__,
                    meMarketUpdate->toString());
   auto nextWriteIndex = m_marketUpdateQueue->getNextToWriteTo();

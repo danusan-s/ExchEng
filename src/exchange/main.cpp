@@ -89,15 +89,15 @@ int main() {
 
   signal(SIGINT, signalHandler);
 
-  exchange::ClientRequestQueue clientRequestQueue(ME_MAX_CLIENT_UPDATES);
+  exchange::ClientRequestImplQueue clientRequestQueue(ME_MAX_CLIENT_UPDATES);
   g_logger->logInfo("%:% %() Created ClientRequestQueue capacity:%\n", __FILE__,
                     __LINE__, __FUNCTION__, ME_MAX_CLIENT_UPDATES);
 
-  exchange::ClientResponseQueue clientResponseQueue(ME_MAX_CLIENT_UPDATES);
+  exchange::ClientResponseImplQueue clientResponseQueue(ME_MAX_CLIENT_UPDATES);
   g_logger->logInfo("%:% %() Created ClientResponseQueue capacity:%\n",
                     __FILE__, __LINE__, __FUNCTION__, ME_MAX_CLIENT_UPDATES);
 
-  exchange::MarketUpdateQueue marketUpdateQueue(ME_MAX_MARKET_UPDATES);
+  exchange::MarketUpdateImplQueue marketUpdateQueue(ME_MAX_MARKET_UPDATES);
   g_logger->logInfo("%:% %() Created MarketUpdateQueue capacity:%\n", __FILE__,
                     __LINE__, __FUNCTION__, ME_MAX_MARKET_UPDATES);
 

@@ -7,13 +7,13 @@ using namespace exchange;
 
 class FIFOSequencerTest : public ::testing::Test {
 protected:
-  static ClientRequestQueue *queue;
+  static ClientRequestImplQueue *queue;
   static common::Logger *logger;
 
   FIFOSequencer *sequencer = nullptr;
 
   static void SetUpTestSuite() {
-    queue = new ClientRequestQueue(1024);
+    queue = new ClientRequestImplQueue(1024);
     logger = new common::Logger("test_fifo_sequencer.log");
   }
 
@@ -25,23 +25,25 @@ protected:
   }
 
   void SetUp() override {
-    while (queue->size()) queue->updateReadIndex();
+    while (queue->size())
+      queue->updateReadIndex();
     sequencer = new FIFOSequencer(queue, logger);
   }
 
   void TearDown() override {
     delete sequencer;
     sequencer = nullptr;
-    while (queue->size()) queue->updateReadIndex();
+    while (queue->size())
+      queue->updateReadIndex();
   }
 
-  MEClientRequest makeReq(ClientId c, OrderId o) {
-    return MEClientRequest{ClientRequestType::NEW, c, 0, o,
-                           common::Side::BUY, 100, 10};
+  ClientRequestImpl makeReq(ClientId c, OrderId o) {
+    return ClientRequestImpl{ClientRequestType::NEW, c,   0, o,
+                             common::Side::BUY,      100, 10};
   }
 };
 
-ClientRequestQueue *FIFOSequencerTest::queue = nullptr;
+ClientRequestImplQueue *FIFOSequencerTest::queue = nullptr;
 common::Logger *FIFOSequencerTest::logger = nullptr;
 
 // Verifies publishing with no pending requests leaves the queue empty.
@@ -73,7 +75,8 @@ TEST_F(FIFOSequencerTest, OutOfOrderRequestsAreTimeSorted) {
   EXPECT_EQ(queue->getNextToRead()->m_orderId, 13u);
 }
 
-// Verifies requests from different clients are merged into one time-ordered stream.
+// Verifies requests from different clients are merged into one time-ordered
+// stream.
 TEST_F(FIFOSequencerTest, MultipleClientsMergedByTime) {
   sequencer->addClientRequest(200, makeReq(2, 22));
   sequencer->addClientRequest(100, makeReq(1, 11));
@@ -105,16 +108,15 @@ TEST_F(FIFOSequencerTest, SortedInputOrderPreserved) {
 
   ASSERT_EQ(queue->size(), 5u);
   for (int i = 0; i < 5; ++i) {
-    EXPECT_EQ(queue->getNextToRead()->m_orderId,
-              static_cast<OrderId>(30 + i));
+    EXPECT_EQ(queue->getNextToRead()->m_orderId, static_cast<OrderId>(30 + i));
     queue->updateReadIndex();
   }
 }
 
 // Verifies cancel-type requests are sequenced like new requests.
 TEST_F(FIFOSequencerTest, CancelRequestsAreSequenced) {
-  MEClientRequest cancel{ClientRequestType::CANCEL, 1, 0, 99,
-                         common::Side::INVALID, 0, 0};
+  ClientRequestImpl cancel{ClientRequestType::CANCEL, 1, 0, 99,
+                           common::Side::INVALID,     0, 0};
   sequencer->addClientRequest(50, cancel);
   sequencer->addClientRequest(100, makeReq(1, 11));
   sequencer->sequenceAndPublish();
@@ -136,8 +138,7 @@ TEST_F(FIFOSequencerTest, LargeBatchIsTimeOrdered) {
   ASSERT_EQ(queue->size(), 100u);
   for (int i = 0; i < 100; ++i) {
     ASSERT_NE(queue->getNextToRead(), nullptr);
-    EXPECT_EQ(queue->getNextToRead()->m_orderId,
-              static_cast<OrderId>(100 + i));
+    EXPECT_EQ(queue->getNextToRead()->m_orderId, static_cast<OrderId>(100 + i));
     queue->updateReadIndex();
   }
 }

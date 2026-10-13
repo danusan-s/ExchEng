@@ -13,7 +13,7 @@ namespace trading {
 class MarketDataConsumer final {
 public:
   MarketDataConsumer(common::ClientId clientId,
-                     exchange::MarketUpdateQueue *marketUpdateQueue,
+                     exchange::MarketUpdateImplQueue *marketUpdateQueue,
                      const std::string &iface, const std::string &snapshotIp,
                      int snapshotPort, const std::string &incrementalIp,
                      int incrementalPort);
@@ -34,13 +34,13 @@ public:
   void startSnapshotSync();
   void checkSnapshotSync();
   void queueMessage(bool isSnapshot,
-                    const exchange::MDPMarketUpdate *marketUpdate);
+                    const exchange::MarketUpdate *marketUpdate);
 
 private:
   size_t m_nextIncomingSeqNum = 1;
 
   // Queue to pass market updates to the trading engine.
-  exchange::MarketUpdateQueue *m_marketUpdateQueue = nullptr;
+  exchange::MarketUpdateImplQueue *m_marketUpdateQueue = nullptr;
 
   std::atomic<bool> m_running = {false};
 
@@ -54,7 +54,7 @@ private:
   const std::string m_snapshotIp;
   const int m_snapshotPort;
 
-  using QueuedMarketUpdates = std::map<size_t, exchange::MEMarketUpdate>;
+  using QueuedMarketUpdates = std::map<size_t, exchange::MarketUpdateImpl>;
   QueuedMarketUpdates m_queuedSnapshotUpdates;
   QueuedMarketUpdates m_queuedIncrementalUpdates;
 };

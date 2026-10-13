@@ -11,24 +11,27 @@ using namespace exchange;
 
 class TradeEngineTest : public ::testing::Test {
 protected:
-  ClientRequestQueue *outReq = nullptr;
-  ClientResponseQueue *inResp = nullptr;
-  MarketUpdateQueue *inMd = nullptr;
+  ClientRequestImplQueue *outReq = nullptr;
+  ClientResponseImplQueue *inResp = nullptr;
+  MarketUpdateImplQueue *inMd = nullptr;
   TradeEngine *engine = nullptr;
   TradeEngineConfigMap cfg{};
 
   void SetUp() override {
-    outReq = new ClientRequestQueue(1024);
-    inResp = new ClientResponseQueue(1024);
-    inMd = new MarketUpdateQueue(1024);
+    outReq = new ClientRequestImplQueue(1024);
+    inResp = new ClientResponseImplQueue(1024);
+    inMd = new MarketUpdateImplQueue(1024);
     cfg = TradeEngineConfigMap{};
     engine = new TradeEngine(7, AlgoType::INVALID, cfg, outReq, inResp, inMd);
   }
 
   void TearDown() override {
-    while (inResp->size()) inResp->updateReadIndex();
-    while (inMd->size()) inMd->updateReadIndex();
-    while (outReq->size()) outReq->updateReadIndex();
+    while (inResp->size())
+      inResp->updateReadIndex();
+    while (inMd->size())
+      inMd->updateReadIndex();
+    while (outReq->size())
+      outReq->updateReadIndex();
     delete engine;
     engine = nullptr;
     delete outReq;
@@ -44,8 +47,8 @@ TEST_F(TradeEngineTest, ReportsClientId) {
 
 // Verifies sendClientRequest enqueues the request for the gateway.
 TEST_F(TradeEngineTest, SendEnqueuesRequest) {
-  MEClientRequest req{ClientRequestType::NEW, 7, 0, 1, common::Side::BUY,
-                      100, 10};
+  ClientRequestImpl req{ClientRequestType::NEW, 7,   0, 1,
+                        common::Side::BUY,      100, 10};
   engine->sendClientRequest(&req);
   ASSERT_EQ(outReq->size(), 1u);
   EXPECT_EQ(outReq->getNextToRead()->m_orderId, 1u);
@@ -53,8 +56,8 @@ TEST_F(TradeEngineTest, SendEnqueuesRequest) {
 
 // Verifies onOrderUpdate with FILL updates the position keeper.
 TEST_F(TradeEngineTest, FillUpdatesPosition) {
-  MEClientResponse f{ClientResponseType::FILLED, 7, 0, 1, 500,
-                     common::Side::BUY, 100, 10, 0};
+  ClientResponseImpl f{ClientResponseType::FILLED, 7,   0,  1, 500,
+                       common::Side::BUY,          100, 10, 0};
   engine->onOrderUpdate(&f);
   EXPECT_EQ(engine->getPositionInfo(0).m_position, 10);
   EXPECT_EQ(engine->getPositionInfo(0).m_volume, 10u);
@@ -64,8 +67,15 @@ TEST_F(TradeEngineTest, FillUpdatesPosition) {
 
 // Verifies onOrderUpdate with ACCEPTED leaves positions flat.
 TEST_F(TradeEngineTest, AcceptLeavesPositionFlat) {
-  MEClientResponse a{ClientResponseType::ACCEPTED, 7, 0, 1, 500,
-                     common::Side::BUY, 100, 0, 10};
+  ClientResponseImpl a{ClientResponseType::ACCEPTED,
+                       7,
+                       0,
+                       1,
+                       500,
+                       common::Side::BUY,
+                       100,
+                       0,
+                       10};
   engine->onOrderUpdate(&a);
   EXPECT_EQ(engine->getPositionInfo(0).m_position, 0);
   EXPECT_EQ(outReq->size(), 0u);
@@ -76,20 +86,20 @@ TEST_F(TradeEngineTest, AcceptLeavesPositionFlat) {
 // (MarketOrderBook::onMarketUpdate calls back into the engine). The book
 // needs two updates per side before its BBO refreshes.
 TEST_F(TradeEngineTest, OrderBookUpdateRefreshesUnreal) {
-  MEClientResponse f{ClientResponseType::FILLED, 7, 0, 1, 500,
-                     common::Side::BUY, 100, 10, 0};
+  ClientResponseImpl f{ClientResponseType::FILLED, 7,   0,  1, 500,
+                       common::Side::BUY,          100, 10, 0};
   engine->onOrderUpdate(&f);
   ASSERT_DOUBLE_EQ(engine->getPositionInfo(0).m_unrealPnL, 0.0);
 
   auto *book = engine->getOrderBook(0);
-  const MEMarketUpdate b1{MarketUpdateType::ADD, 1, 0, common::Side::BUY,
-                          110, 10, 1};
-  const MEMarketUpdate b2{MarketUpdateType::ADD, 2, 0, common::Side::BUY,
-                          110, 10, 1};
-  const MEMarketUpdate a1{MarketUpdateType::ADD, 3, 0, common::Side::SELL,
-                          112, 10, 1};
-  const MEMarketUpdate a2{MarketUpdateType::ADD, 4, 0, common::Side::SELL,
-                          112, 10, 1};
+  const MarketUpdateImpl b1{
+      MarketUpdateType::ADD, 1, 0, common::Side::BUY, 110, 10, 1};
+  const MarketUpdateImpl b2{
+      MarketUpdateType::ADD, 2, 0, common::Side::BUY, 110, 10, 1};
+  const MarketUpdateImpl a1{
+      MarketUpdateType::ADD, 3, 0, common::Side::SELL, 112, 10, 1};
+  const MarketUpdateImpl a2{
+      MarketUpdateType::ADD, 4, 0, common::Side::SELL, 112, 10, 1};
   book->onMarketUpdate(&b1);
   book->onMarketUpdate(&b2);
   book->onMarketUpdate(&a1);
@@ -101,11 +111,18 @@ TEST_F(TradeEngineTest, OrderBookUpdateRefreshesUnreal) {
 // Verifies the default algo callbacks tolerate updates without crashing.
 TEST_F(TradeEngineTest, DefaultAlgoCallbacksAreSafe) {
   engine->defaultAlgoOnOrderBookUpdate(0, 100, common::Side::BUY, nullptr);
-  MEMarketUpdate u{MarketUpdateType::ADD, 1, 0, common::Side::BUY,
-                   100, 10, 1};
+  MarketUpdateImpl u{
+      MarketUpdateType::ADD, 1, 0, common::Side::BUY, 100, 10, 1};
   engine->defaultAlgoOnTradeUpdate(&u, nullptr);
-  MEClientResponse a{ClientResponseType::ACCEPTED, 7, 0, 1, 500,
-                     common::Side::BUY, 100, 0, 10};
+  ClientResponseImpl a{ClientResponseType::ACCEPTED,
+                       7,
+                       0,
+                       1,
+                       500,
+                       common::Side::BUY,
+                       100,
+                       0,
+                       10};
   engine->defaultAlgoOnOrderUpdate(&a);
   SUCCEED();
 }
@@ -118,19 +135,23 @@ TEST_F(TradeEngineTest, MakerEnginePostsQuotesOnBookUpdate) {
   makerCfg[0].m_riskConfig.m_maxOrderSize = 100;
   makerCfg[0].m_riskConfig.m_maxPosition = 1000;
   makerCfg[0].m_riskConfig.m_maxLoss = -1e9;
-  ClientRequestQueue rq(1024);
-  ClientResponseQueue rs(1024);
-  MarketUpdateQueue md(1024);
+  ClientRequestImplQueue rq(1024);
+  ClientResponseImplQueue rs(1024);
+  MarketUpdateImplQueue md(1024);
   TradeEngine maker(9, AlgoType::MAKER, makerCfg, &rq, &rs, &md);
   // Drive two-sided ADDs through the maker's own book 0 via md queue + run
   // equivalent: use onOrderBookUpdate path with a scratch book is not the
   // wiring; instead verify the algo callback was overridden (not default) by
   // checking a book update yields requests. Feed market data through run()
   // briefly.
-  MEMarketUpdate b1{MarketUpdateType::ADD, 1, 0, common::Side::BUY, 100, 10, 1};
-  MEMarketUpdate b2{MarketUpdateType::ADD, 2, 0, common::Side::BUY, 100, 10, 1};
-  MEMarketUpdate a1{MarketUpdateType::ADD, 3, 0, common::Side::SELL, 102, 10, 1};
-  MEMarketUpdate a2{MarketUpdateType::ADD, 4, 0, common::Side::SELL, 102, 10, 1};
+  MarketUpdateImpl b1{
+      MarketUpdateType::ADD, 1, 0, common::Side::BUY, 100, 10, 1};
+  MarketUpdateImpl b2{
+      MarketUpdateType::ADD, 2, 0, common::Side::BUY, 100, 10, 1};
+  MarketUpdateImpl a1{
+      MarketUpdateType::ADD, 3, 0, common::Side::SELL, 102, 10, 1};
+  MarketUpdateImpl a2{
+      MarketUpdateType::ADD, 4, 0, common::Side::SELL, 102, 10, 1};
   for (const auto *u : {&b1, &b2, &a1, &a2}) {
     auto *w = md.getNextToWriteTo();
     *w = *u;

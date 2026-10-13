@@ -3,7 +3,7 @@
 namespace exchange {
 
 void FIFOSequencer::addClientRequest(
-    Nanos recvTime, const MEClientRequest &clientRequest) noexcept {
+    Nanos recvTime, const ClientRequestImpl &clientRequest) noexcept {
   if (m_pendingSize >= MAX_ME_PENDING_REQUESTS) [[unlikely]] {
     FATAL("FIFOSequencer pending requests exceeded max size of " +
           std::to_string(MAX_ME_PENDING_REQUESTS));
@@ -25,8 +25,7 @@ void FIFOSequencer::sequenceAndPublish() noexcept {
   for (size_t i = 0; i < m_pendingSize; ++i) {
     const auto &req = m_pendingRequests[i];
     m_logger->logData("%:% %() Writing request: %\n", __FILE__, __LINE__,
-                      __FUNCTION__,
-                      req.m_clientRequest.toString());
+                      __FUNCTION__, req.m_clientRequest.toString());
     auto *nextToWrite = m_clientRequestQueue->getNextToWriteTo();
     *nextToWrite = req.m_clientRequest;
     m_clientRequestQueue->updateWriteIndex();

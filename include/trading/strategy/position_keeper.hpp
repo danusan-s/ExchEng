@@ -26,7 +26,7 @@ struct PositionInfo {
   const BBO *m_bbo = nullptr;
 
   std::string toString() const;
-  void addFill(const exchange::MEClientResponse *clientResponse,
+  void addFill(const exchange::ClientResponseImpl *clientResponse,
                Logger *logger) noexcept;
   void updateBBO(const BBO *bbo, Logger *logger) noexcept;
 };
@@ -42,7 +42,7 @@ public:
 
   const PositionInfo &getPositionInfo(TickerId tickerId) const;
   std::string toString() const;
-  void addFill(const exchange::MEClientResponse *clientResponse) noexcept;
+  void addFill(const exchange::ClientResponseImpl *clientResponse) noexcept;
   void updateBBO(TickerId tickerId, const BBO *bbo) noexcept;
 
 private:

@@ -25,7 +25,8 @@ public:
                  Quantity qty) noexcept;
   void moveOrders(TickerId tickerId, Price bidPrice, Price askPrice,
                   Quantity clip) noexcept;
-  void onOrderUpdate(const exchange::MEClientResponse *clientResponse) noexcept;
+  void
+  onOrderUpdate(const exchange::ClientResponseImpl *clientResponse) noexcept;
 
 private:
   TradeEngine *m_tradeEngine = nullptr;

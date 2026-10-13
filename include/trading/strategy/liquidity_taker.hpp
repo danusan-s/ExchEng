@@ -22,9 +22,10 @@ public:
 
   void onOrderBookUpdate(TickerId tickerId, Price price, Side side,
                          const MarketOrderBook *orderBook) noexcept;
-  void onTradeUpdate(const exchange::MEMarketUpdate *marketUpdate,
+  void onTradeUpdate(const exchange::MarketUpdateImpl *marketUpdate,
                      const MarketOrderBook *orderBook) noexcept;
-  void onOrderUpdate(const exchange::MEClientResponse *clientResponse) noexcept;
+  void
+  onOrderUpdate(const exchange::ClientResponseImpl *clientResponse) noexcept;
 
 private:
   const FeatureEngine *m_featureEngine = nullptr;

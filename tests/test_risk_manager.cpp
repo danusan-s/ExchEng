@@ -40,8 +40,8 @@ protected:
   }
 
   void buyFill(TickerId t, Price p, Quantity q) {
-    MEClientResponse f{ClientResponseType::FILLED, 1, t, 7, 900,
-                       common::Side::BUY, p, q, 0};
+    ClientResponseImpl f{ClientResponseType::FILLED, 1, t, 7, 900,
+                         common::Side::BUY,          p, q, 0};
     keeper->addFill(&f);
   }
 };
@@ -83,8 +83,8 @@ TEST_F(RiskManagerTest, ReducingOrderPassesPositionCheck) {
 
 // Verifies short-side position breaches are rejected symmetrically.
 TEST_F(RiskManagerTest, ShortPositionBreachIsRejected) {
-  MEClientResponse f{ClientResponseType::FILLED, 1, 0, 7, 900,
-                     common::Side::SELL, 100, 190, 0};
+  ClientResponseImpl f{ClientResponseType::FILLED, 1,   0,   7, 900,
+                       common::Side::SELL,         100, 190, 0};
   keeper->addFill(&f);
   EXPECT_EQ(risk->checkPreTradeRisk(0, common::Side::SELL, 20),
             RiskCheckResult::POSITION_TOO_LARGE);
@@ -94,15 +94,16 @@ TEST_F(RiskManagerTest, ShortPositionBreachIsRejected) {
 TEST_F(RiskManagerTest, LossBreachHaltsTrading) {
   // Lose money: buy high, sell low for a -2000 realized loss.
   buyFill(0, 200, 20);
-  MEClientResponse s{ClientResponseType::FILLED, 1, 0, 8, 901,
-                     common::Side::SELL, 100, 20, 0};
+  ClientResponseImpl s{ClientResponseType::FILLED, 1,   0,  8, 901,
+                       common::Side::SELL,         100, 20, 0};
   keeper->addFill(&s);
   ASSERT_LT(keeper->getPositionInfo(0).m_totalPnL, -1000.0);
   EXPECT_EQ(risk->checkPreTradeRisk(0, common::Side::BUY, 10),
             RiskCheckResult::LOSS_TOO_LARGE);
 }
 
-// Verifies risk configs are per-ticker (default zero config rejects everything).
+// Verifies risk configs are per-ticker (default zero config rejects
+// everything).
 TEST_F(RiskManagerTest, UnconfiguredTickerRejectsAnyOrder) {
   EXPECT_EQ(risk->checkPreTradeRisk(3, common::Side::BUY, 1),
             RiskCheckResult::ORDER_TOO_LARGE);

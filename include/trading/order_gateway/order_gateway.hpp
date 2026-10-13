@@ -11,8 +11,8 @@ namespace trading {
 class OrderGateway final {
 public:
   OrderGateway(ClientId clientId,
-               exchange::ClientRequestQueue *clientRequestsQueue,
-               exchange::ClientResponseQueue *clientResponsesQueue,
+               exchange::ClientRequestImplQueue *clientRequestsQueue,
+               exchange::ClientResponseImplQueue *clientResponsesQueue,
                const std::string &ip, const std::string &iface, int port);
 
   ~OrderGateway();
@@ -36,8 +36,8 @@ private:
   const std::string m_iface;
   const int m_port = 0;
 
-  exchange::ClientRequestQueue *m_outgoingRequests = nullptr;
-  exchange::ClientResponseQueue *m_incomingResponses = nullptr;
+  exchange::ClientRequestImplQueue *m_outgoingRequests = nullptr;
+  exchange::ClientResponseImplQueue *m_incomingResponses = nullptr;
 
   std::atomic<bool> m_isRunning = false;
 

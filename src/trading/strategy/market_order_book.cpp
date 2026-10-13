@@ -22,7 +22,7 @@ void MarketOrderBook::setTradeEngine(TradeEngine *tradeEngine) {
 }
 
 void MarketOrderBook::onMarketUpdate(
-    const exchange::MEMarketUpdate *marketUpdate) noexcept {
+    const exchange::MarketUpdateImpl *marketUpdate) noexcept {
 
   // Better bid or added to best bid
   const auto bidChanged =

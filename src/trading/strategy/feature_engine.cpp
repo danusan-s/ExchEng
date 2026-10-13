@@ -22,8 +22,9 @@ void FeatureEngine::onOrderBookUpdate(
                     m_aggresiveTradeQtyRatio);
 }
 
-void FeatureEngine::onTradeUpdate(const exchange::MEMarketUpdate *marketUpdate,
-                                  const MarketOrderBook *orderBook) noexcept {
+void FeatureEngine::onTradeUpdate(
+    const exchange::MarketUpdateImpl *marketUpdate,
+    const MarketOrderBook *orderBook) noexcept {
   const auto bbo = orderBook->getBBO();
   if (bbo->m_bidPrice != INVALID_PRICE && bbo->m_askPrice != INVALID_PRICE)
       [[likely]] {
@@ -35,7 +36,7 @@ void FeatureEngine::onTradeUpdate(const exchange::MEMarketUpdate *marketUpdate,
   }
 
   m_logger->logData("%:% %() % marketPrice=% "
-                     "aggresiveTradeQtyRatio=%\n",
+                    "aggresiveTradeQtyRatio=%\n",
                     __FILE__, __LINE__, __FUNCTION__, marketUpdate->toString(),
                     m_marketPrice, m_aggresiveTradeQtyRatio);
 }

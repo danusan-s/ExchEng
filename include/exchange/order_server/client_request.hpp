@@ -30,7 +30,7 @@ inline std::string clientRequestTypeToString(ClientRequestType type) {
   return "UNKNOWN";
 }
 
-struct MEClientRequest {
+struct ClientRequestImpl {
   ClientRequestType m_type = ClientRequestType::INVALID;
   ClientId m_clientId = INVALID_CLIENT_ID;
   TickerId m_tickerId = INVALID_TICKER_ID;
@@ -41,7 +41,7 @@ struct MEClientRequest {
 
   std::string toString() const {
     std::ostringstream oss;
-    oss << "MEClientRequest [ "
+    oss << "ClientRequestImpl [ "
         << "type: " << clientRequestTypeToString(m_type)
         << ", clientId: " << clientIdToString(m_clientId)
         << ", tickerId: " << tickerIdToString(m_tickerId)
@@ -53,21 +53,20 @@ struct MEClientRequest {
   }
 };
 
-struct OMClientRequest {
+struct ClientRequest {
   size_t m_seqNum = 0;
-  MEClientRequest m_request;
+  ClientRequestImpl m_request;
 
   std::string toString() const {
     std::ostringstream oss;
-    oss << "OMClientRequest [ "
-        << "seqNum: " << m_seqNum << ", request: " << m_request.toString()
-        << " ]";
+    oss << "ClientRequest [ "
+        << "seqNum: " << m_seqNum << ", " << m_request.toString() << " ]";
     return oss.str();
   }
 };
 
 #pragma pack(pop)
 
-using ClientRequestQueue = common::LFQueue<MEClientRequest>;
+using ClientRequestImplQueue = common::LFQueue<ClientRequestImpl>;
 
 } // namespace exchange

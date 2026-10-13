@@ -3,9 +3,9 @@
 #include <vector>
 
 #include "common/logging.hpp"
+#include "exchange/market_data/market_update.hpp"
 #include "exchange/matcher/matching_engine.hpp"
 #include "exchange/matcher/me_order_book.hpp"
-#include "exchange/market_data/market_update.hpp"
 #include "exchange/order_server/client_request.hpp"
 #include "exchange/order_server/client_response.hpp"
 
@@ -14,18 +14,18 @@ using namespace exchange;
 // Shared engine/queues for all tests; each TEST gets a fresh isolated book.
 class MEOrderBookTest : public ::testing::Test {
 protected:
-  static ClientRequestQueue *reqQ;
-  static ClientResponseQueue *respQ;
-  static MarketUpdateQueue *mdQ;
+  static ClientRequestImplQueue *reqQ;
+  static ClientResponseImplQueue *respQ;
+  static MarketUpdateImplQueue *mdQ;
   static common::Logger *logger;
   static MatchingEngine *engine;
 
   MEOrderBook *book = nullptr;
 
   static void SetUpTestSuite() {
-    reqQ = new ClientRequestQueue(4096);
-    respQ = new ClientResponseQueue(4096);
-    mdQ = new MarketUpdateQueue(4096);
+    reqQ = new ClientRequestImplQueue(4096);
+    respQ = new ClientResponseImplQueue(4096);
+    mdQ = new MarketUpdateImplQueue(4096);
     logger = new common::Logger("test_me_order_book.log");
     engine = new MatchingEngine(reqQ, respQ, mdQ);
   }
@@ -52,13 +52,16 @@ protected:
   }
 
   void drainQueues() {
-    while (respQ->size()) respQ->updateReadIndex();
-    while (mdQ->size()) mdQ->updateReadIndex();
-    while (reqQ->size()) reqQ->updateReadIndex();
+    while (respQ->size())
+      respQ->updateReadIndex();
+    while (mdQ->size())
+      mdQ->updateReadIndex();
+    while (reqQ->size())
+      reqQ->updateReadIndex();
   }
 
-  std::vector<MEClientResponse> drainResponses() {
-    std::vector<MEClientResponse> out;
+  std::vector<ClientResponseImpl> drainResponses() {
+    std::vector<ClientResponseImpl> out;
     for (auto *r = respQ->getNextToRead(); r; r = respQ->getNextToRead()) {
       out.push_back(*r);
       respQ->updateReadIndex();
@@ -66,8 +69,8 @@ protected:
     return out;
   }
 
-  std::vector<MEMarketUpdate> drainUpdates() {
-    std::vector<MEMarketUpdate> out;
+  std::vector<MarketUpdateImpl> drainUpdates() {
+    std::vector<MarketUpdateImpl> out;
     for (auto *u = mdQ->getNextToRead(); u; u = mdQ->getNextToRead()) {
       out.push_back(*u);
       mdQ->updateReadIndex();
@@ -76,9 +79,9 @@ protected:
   }
 };
 
-ClientRequestQueue *MEOrderBookTest::reqQ = nullptr;
-ClientResponseQueue *MEOrderBookTest::respQ = nullptr;
-MarketUpdateQueue *MEOrderBookTest::mdQ = nullptr;
+ClientRequestImplQueue *MEOrderBookTest::reqQ = nullptr;
+ClientResponseImplQueue *MEOrderBookTest::respQ = nullptr;
+MarketUpdateImplQueue *MEOrderBookTest::mdQ = nullptr;
 common::Logger *MEOrderBookTest::logger = nullptr;
 MatchingEngine *MEOrderBookTest::engine = nullptr;
 
@@ -100,7 +103,8 @@ TEST_F(MEOrderBookTest, RestingBidProducesAcceptedAndAdd) {
   EXPECT_EQ(updates[0].m_qty, 10u);
 }
 
-// Verifies a crossing sell fully lifts a resting bid with two FILLs and TRADE+CANCEL.
+// Verifies a crossing sell fully lifts a resting bid with two FILLs and
+// TRADE+CANCEL.
 TEST_F(MEOrderBookTest, FullMatchGeneratesFillsTradeAndCancel) {
   book->add(1, 100, 0, common::Side::BUY, 100, 10);
   drainResponses();
@@ -126,7 +130,8 @@ TEST_F(MEOrderBookTest, FullMatchGeneratesFillsTradeAndCancel) {
   EXPECT_EQ(updates[1].m_type, MarketUpdateType::CANCEL);
 }
 
-// Verifies a larger aggressor partially fills and leaves a MODIFY plus ADD remainder.
+// Verifies a larger aggressor partially fills and leaves a MODIFY plus ADD
+// remainder.
 TEST_F(MEOrderBookTest, PartialFillLeavesRemainderWithModifyAndAdd) {
   book->add(1, 100, 0, common::Side::BUY, 100, 5);
   drainResponses();
@@ -199,7 +204,8 @@ TEST_F(MEOrderBookTest, CancelLiveOrderSucceeds) {
   EXPECT_EQ(updates[0].m_type, MarketUpdateType::CANCEL);
 }
 
-// Verifies cancelling an unknown order emits CANCEL_REJECTED with no market update.
+// Verifies cancelling an unknown order emits CANCEL_REJECTED with no market
+// update.
 TEST_F(MEOrderBookTest, CancelUnknownOrderIsRejected) {
   book->cancel(9, 999, 0);
   auto resps = drainResponses();

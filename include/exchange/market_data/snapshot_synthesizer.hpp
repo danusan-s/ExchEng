@@ -10,7 +10,7 @@ namespace exchange {
 
 class SnapshotSynthesizer final {
 public:
-  SnapshotSynthesizer(MDPMarketUpdateQueue *snapshotUpdateQueue,
+  SnapshotSynthesizer(MarketUpdateQueue *snapshotUpdateQueue,
                       const std::string &iface, const std::string &ip,
                       int port) noexcept;
 
@@ -26,20 +26,20 @@ public:
   SnapshotSynthesizer(SnapshotSynthesizer &&) = delete;
   SnapshotSynthesizer &operator=(SnapshotSynthesizer &&) = delete;
 
-  void addToSnapshot(const MDPMarketUpdate *snapshotUpdate) noexcept;
+  void addToSnapshot(const MarketUpdate *snapshotUpdate) noexcept;
   void publishSnapshot() noexcept;
 
   // Testability: expose snapshot state without breaking encapsulation.
   size_t getLastSeqNum() const noexcept {
     return m_lastIncrementalSeqNum;
   }
-  const MEMarketUpdate *getSnapshotOrder(TickerId tickerId,
-                                         OrderId orderId) const noexcept {
+  const MarketUpdateImpl *getSnapshotOrder(TickerId tickerId,
+                                           OrderId orderId) const noexcept {
     return m_tickerOrders.at(tickerId).at(orderId);
   }
 
 private:
-  MDPMarketUpdateQueue *m_snapshotUpdateQueue = nullptr;
+  MarketUpdateQueue *m_snapshotUpdateQueue = nullptr;
 
   Logger m_logger;
 
@@ -47,13 +47,13 @@ private:
 
   MulticastSocket m_snapshotSocket;
 
-  std::array<std::array<MEMarketUpdate *, ME_MAX_ORDER_IDS>, ME_MAX_TICKERS>
+  std::array<std::array<MarketUpdateImpl *, ME_MAX_ORDER_IDS>, ME_MAX_TICKERS>
       m_tickerOrders;
 
   size_t m_lastIncrementalSeqNum = 0;
   Nanos m_lastSnapshotTime = 0;
 
-  MemPool<MEMarketUpdate> m_orderPool;
+  MemPool<MarketUpdateImpl> m_orderPool;
 };
 
 } // namespace exchange

@@ -11,7 +11,7 @@ namespace exchange {
 
 class MarketDataPublisher final {
 public:
-  MarketDataPublisher(MarketUpdateQueue *outgoingUpdateQueue,
+  MarketDataPublisher(MarketUpdateImplQueue *outgoingUpdateQueue,
                       const std::string &iface, const std::string &snapshotIp,
                       int snapshotPort, const std::string &incrementalUpdateIp,
                       int incrementalUpdatePort) noexcept;
@@ -30,7 +30,7 @@ public:
 
 private:
   size_t m_nextOutSeqNum = 1;
-  MarketUpdateQueue *m_outgoingUpdateQueue = nullptr;
+  MarketUpdateImplQueue *m_outgoingUpdateQueue = nullptr;
 
   Logger m_logger;
 
@@ -38,7 +38,7 @@ private:
 
   std::atomic<bool> m_running = false;
 
-  MDPMarketUpdateQueue m_snapshotUpdateQueue;
+  MarketUpdateQueue m_snapshotUpdateQueue;
   SnapshotSynthesizer *m_snapshotSynthesizer = nullptr;
 };
 

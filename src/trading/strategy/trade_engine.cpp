@@ -3,11 +3,12 @@
 
 namespace trading {
 
-TradeEngine::TradeEngine(ClientId clientId, AlgoType algoType,
-                         const TradeEngineConfigMap &tickerConfig,
-                         exchange::ClientRequestQueue *outgoingClientRequests,
-                         exchange::ClientResponseQueue *incomingClientResponses,
-                         exchange::MarketUpdateQueue *incomingMarketUpdates)
+TradeEngine::TradeEngine(
+    ClientId clientId, AlgoType algoType,
+    const TradeEngineConfigMap &tickerConfig,
+    exchange::ClientRequestImplQueue *outgoingClientRequests,
+    exchange::ClientResponseImplQueue *incomingClientResponses,
+    exchange::MarketUpdateImplQueue *incomingMarketUpdates)
     : m_clientId(clientId), m_outgoingClientRequests(outgoingClientRequests),
       m_incomingClientResponses(incomingClientResponses),
       m_incomingMarketUpdates(incomingMarketUpdates),
@@ -125,7 +126,7 @@ void TradeEngine::run() noexcept {
 }
 
 void TradeEngine::sendClientRequest(
-    const exchange::MEClientRequest *clientRequest) noexcept {
+    const exchange::ClientRequestImpl *clientRequest) noexcept {
   auto nextWrite = m_outgoingClientRequests->getNextToWriteTo();
   *nextWrite = std::move(*clientRequest);
   m_outgoingClientRequests->updateWriteIndex();
@@ -139,14 +140,14 @@ void TradeEngine::onOrderBookUpdate(TickerId tickerId, Price price, Side side,
   m_algoOnOrderBookUpdate(tickerId, price, side, orderBook);
 }
 
-void TradeEngine::onTradeUpdate(const exchange::MEMarketUpdate *marketUpdate,
+void TradeEngine::onTradeUpdate(const exchange::MarketUpdateImpl *marketUpdate,
                                 const MarketOrderBook *orderBook) noexcept {
   m_featureEngine.onTradeUpdate(marketUpdate, orderBook);
   m_algoOnTradeUpdate(marketUpdate, orderBook);
 }
 
 void TradeEngine::onOrderUpdate(
-    const exchange::MEClientResponse *clientResponse) noexcept {
+    const exchange::ClientResponseImpl *clientResponse) noexcept {
   if (clientResponse->m_type == exchange::ClientResponseType::FILLED) {
     m_positionKeeper.addFill(clientResponse);
   }
@@ -164,14 +165,14 @@ void TradeEngine::defaultAlgoOnOrderBookUpdate(
 }
 
 void TradeEngine::defaultAlgoOnTradeUpdate(
-    const exchange::MEMarketUpdate *marketUpdate,
+    const exchange::MarketUpdateImpl *marketUpdate,
     const MarketOrderBook *) noexcept {
   m_logger.logData("%:% %() Received trade update %\n", __FILE__, __LINE__,
                    __FUNCTION__, marketUpdate->toString());
 }
 
 void TradeEngine::defaultAlgoOnOrderUpdate(
-    const exchange::MEClientResponse *clientResponse) noexcept {
+    const exchange::ClientResponseImpl *clientResponse) noexcept {
   m_logger.logData("%:% %() Received order update %\n", __FILE__, __LINE__,
                    __FUNCTION__, clientResponse->toString());
 }

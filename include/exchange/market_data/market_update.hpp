@@ -42,7 +42,7 @@ inline std::string marketUpdateTypeToString(MarketUpdateType type) {
   return "UNKNOWN";
 }
 
-struct MEMarketUpdate {
+struct MarketUpdateImpl {
   MarketUpdateType m_type = MarketUpdateType::INVALID;
 
   OrderId m_marketOrderId = INVALID_ORDER_ID;
@@ -54,7 +54,7 @@ struct MEMarketUpdate {
 
   std::string toString() const {
     std::stringstream ss;
-    ss << "MEMarketUpdate [ "
+    ss << "MarketUpdateImpl [ "
        << "type: " << marketUpdateTypeToString(m_type)
        << ", ticker: " << tickerIdToString(m_tickerId)
        << ", oid: " << orderIdToString(m_marketOrderId)
@@ -66,22 +66,21 @@ struct MEMarketUpdate {
   }
 };
 
-struct MDPMarketUpdate {
+struct MarketUpdate {
   size_t m_seqNum = 0;
-  MEMarketUpdate m_marketUpdate;
+  MarketUpdateImpl m_marketUpdate;
 
   std::string toString() const {
     std::stringstream ss;
-    ss << "MDPMarketUpdate [ "
-       << "seqNum: " << m_seqNum
-       << ", marketUpdate: " << m_marketUpdate.toString() << " ]";
+    ss << "MarketUpdate [ "
+       << "seqNum: " << m_seqNum << ", " << m_marketUpdate.toString() << " ]";
     return ss.str();
   }
 };
 
 #pragma pack(pop)
 
-using MarketUpdateQueue = common::LFQueue<MEMarketUpdate>;
-using MDPMarketUpdateQueue = common::LFQueue<MDPMarketUpdate>;
+using MarketUpdateImplQueue = common::LFQueue<MarketUpdateImpl>;
+using MarketUpdateQueue = common::LFQueue<MarketUpdate>;
 
 } // namespace exchange

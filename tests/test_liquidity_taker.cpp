@@ -9,9 +9,9 @@ using namespace exchange;
 
 class LiquidityTakerTest : public ::testing::Test {
 protected:
-  static ClientRequestQueue *outReq;
-  static ClientResponseQueue *inResp;
-  static MarketUpdateQueue *inMd;
+  static ClientRequestImplQueue *outReq;
+  static ClientResponseImplQueue *inResp;
+  static MarketUpdateImplQueue *inMd;
   static common::Logger *logger;
 
   TradeEngine *engine = nullptr;
@@ -24,9 +24,9 @@ protected:
   TradeEngineConfigMap cfg{};
 
   static void SetUpTestSuite() {
-    outReq = new ClientRequestQueue(4096);
-    inResp = new ClientResponseQueue(4096);
-    inMd = new MarketUpdateQueue(4096);
+    outReq = new ClientRequestImplQueue(4096);
+    inResp = new ClientResponseImplQueue(4096);
+    inMd = new MarketUpdateImplQueue(4096);
     logger = new common::Logger("test_liquidity_taker.log");
   }
 
@@ -38,7 +38,8 @@ protected:
   }
 
   void SetUp() override {
-    while (outReq->size()) outReq->updateReadIndex();
+    while (outReq->size())
+      outReq->updateReadIndex();
     cfg = TradeEngineConfigMap{};
     cfg[0].m_clip = 10;
     cfg[0].m_threshold = 0.5;
@@ -68,22 +69,25 @@ protected:
     engine = nullptr;
     delete book;
     book = nullptr;
-    while (outReq->size()) outReq->updateReadIndex();
-    while (inResp->size()) inResp->updateReadIndex();
-    while (inMd->size()) inMd->updateReadIndex();
+    while (outReq->size())
+      outReq->updateReadIndex();
+    while (inResp->size())
+      inResp->updateReadIndex();
+    while (inMd->size())
+      inMd->updateReadIndex();
   }
 
   // Builds a two-sided book with valid BBO (two updates per side, since the
   // book only refreshes BBO once the side already exists).
   void makeTwoSidedBook() {
-    MEMarketUpdate b1{MarketUpdateType::ADD, 1, 0, common::Side::BUY, 100,
-                      10, 1};
-    MEMarketUpdate b2{MarketUpdateType::ADD, 2, 0, common::Side::BUY, 100,
-                      10, 1};
-    MEMarketUpdate a1{MarketUpdateType::ADD, 3, 0, common::Side::SELL, 102,
-                      10, 1};
-    MEMarketUpdate a2{MarketUpdateType::ADD, 4, 0, common::Side::SELL, 102,
-                      10, 1};
+    MarketUpdateImpl b1{
+        MarketUpdateType::ADD, 1, 0, common::Side::BUY, 100, 10, 1};
+    MarketUpdateImpl b2{
+        MarketUpdateType::ADD, 2, 0, common::Side::BUY, 100, 10, 1};
+    MarketUpdateImpl a1{
+        MarketUpdateType::ADD, 3, 0, common::Side::SELL, 102, 10, 1};
+    MarketUpdateImpl a2{
+        MarketUpdateType::ADD, 4, 0, common::Side::SELL, 102, 10, 1};
     book->onMarketUpdate(&b1);
     book->onMarketUpdate(&b2);
     book->onMarketUpdate(&a1);
@@ -91,9 +95,9 @@ protected:
   }
 };
 
-ClientRequestQueue *LiquidityTakerTest::outReq = nullptr;
-ClientResponseQueue *LiquidityTakerTest::inResp = nullptr;
-MarketUpdateQueue *LiquidityTakerTest::inMd = nullptr;
+ClientRequestImplQueue *LiquidityTakerTest::outReq = nullptr;
+ClientResponseImplQueue *LiquidityTakerTest::inResp = nullptr;
+MarketUpdateImplQueue *LiquidityTakerTest::inMd = nullptr;
 common::Logger *LiquidityTakerTest::logger = nullptr;
 
 // Verifies order-book updates alone never trigger taker orders.
@@ -106,9 +110,13 @@ TEST_F(LiquidityTakerTest, BookUpdateSendsNothing) {
 // Verifies a weak (below-threshold) aggressive ratio sends nothing.
 TEST_F(LiquidityTakerTest, WeakSignalSendsNothing) {
   makeTwoSidedBook();
-  MEMarketUpdate t{MarketUpdateType::TRADE, common::INVALID_ORDER_ID, 0,
-                   common::Side::BUY, 102, 1,
-                   common::INVALID_PRIORITY};
+  MarketUpdateImpl t{MarketUpdateType::TRADE,
+                     common::INVALID_ORDER_ID,
+                     0,
+                     common::Side::BUY,
+                     102,
+                     1,
+                     common::INVALID_PRIORITY};
   features->onTradeUpdate(&t, book); // Ratio 1/20 = 0.05 < 0.5.
   taker->onTradeUpdate(&t, book);
   EXPECT_EQ(outReq->size(), 0u);
@@ -117,9 +125,13 @@ TEST_F(LiquidityTakerTest, WeakSignalSendsNothing) {
 // Verifies a ratio exactly at threshold still triggers (book uses >=).
 TEST_F(LiquidityTakerTest, ThresholdBoundaryTriggers) {
   makeTwoSidedBook(); // ask BBO qty 20.
-  MEMarketUpdate t{MarketUpdateType::TRADE, common::INVALID_ORDER_ID, 0,
-                   common::Side::BUY, 102, 10,
-                   common::INVALID_PRIORITY};
+  MarketUpdateImpl t{MarketUpdateType::TRADE,
+                     common::INVALID_ORDER_ID,
+                     0,
+                     common::Side::BUY,
+                     102,
+                     10,
+                     common::INVALID_PRIORITY};
   features->onTradeUpdate(&t, book); // Ratio 10/20 = 0.5 == threshold.
   ASSERT_DOUBLE_EQ(features->getAggresiveTradeQtyRatio(), 0.5);
   taker->onTradeUpdate(&t, book);
@@ -130,9 +142,13 @@ TEST_F(LiquidityTakerTest, ThresholdBoundaryTriggers) {
 // clip qty, and no bid leg (opposite leg is INVALID).
 TEST_F(LiquidityTakerTest, StrongBuySignalBuysAtAsk) {
   makeTwoSidedBook();
-  MEMarketUpdate t{MarketUpdateType::TRADE, common::INVALID_ORDER_ID, 0,
-                   common::Side::BUY, 102, 20,
-                   common::INVALID_PRIORITY};
+  MarketUpdateImpl t{MarketUpdateType::TRADE,
+                     common::INVALID_ORDER_ID,
+                     0,
+                     common::Side::BUY,
+                     102,
+                     20,
+                     common::INVALID_PRIORITY};
   features->onTradeUpdate(&t, book); // Ratio 20/20 = 1.0 >= 0.5.
   taker->onTradeUpdate(&t, book);
   ASSERT_EQ(outReq->size(), 1u);
@@ -145,9 +161,13 @@ TEST_F(LiquidityTakerTest, StrongBuySignalBuysAtAsk) {
 // Verifies a strong aggressive SELL triggers exactly one sell at the bid.
 TEST_F(LiquidityTakerTest, StrongSellSignalSellsAtBid) {
   makeTwoSidedBook();
-  MEMarketUpdate t{MarketUpdateType::TRADE, common::INVALID_ORDER_ID, 0,
-                   common::Side::SELL, 100, 20,
-                   common::INVALID_PRIORITY};
+  MarketUpdateImpl t{MarketUpdateType::TRADE,
+                     common::INVALID_ORDER_ID,
+                     0,
+                     common::Side::SELL,
+                     100,
+                     20,
+                     common::INVALID_PRIORITY};
   features->onTradeUpdate(&t, book); // Ratio 20/20 = 1.0 >= 0.5.
   taker->onTradeUpdate(&t, book);
   ASSERT_EQ(outReq->size(), 1u);
@@ -161,9 +181,13 @@ TEST_F(LiquidityTakerTest, StrongSellSignalSellsAtBid) {
 TEST_F(LiquidityTakerTest, InvalidRatioSendsNothing) {
   makeTwoSidedBook();
   // No feature update, so ratio stays NaN.
-  MEMarketUpdate t{MarketUpdateType::TRADE, common::INVALID_ORDER_ID, 0,
-                   common::Side::BUY, 102, 10,
-                   common::INVALID_PRIORITY};
+  MarketUpdateImpl t{MarketUpdateType::TRADE,
+                     common::INVALID_ORDER_ID,
+                     0,
+                     common::Side::BUY,
+                     102,
+                     10,
+                     common::INVALID_PRIORITY};
   taker->onTradeUpdate(&t, book);
   EXPECT_EQ(outReq->size(), 0u);
 }
@@ -172,19 +196,32 @@ TEST_F(LiquidityTakerTest, InvalidRatioSendsNothing) {
 // while sending no new requests themselves.
 TEST_F(LiquidityTakerTest, OrderUpdateForwardedWithoutNewRequests) {
   makeTwoSidedBook();
-  MEMarketUpdate t{MarketUpdateType::TRADE, common::INVALID_ORDER_ID, 0,
-                   common::Side::BUY, 102, 20,
-                   common::INVALID_PRIORITY};
+  MarketUpdateImpl t{MarketUpdateType::TRADE,
+                     common::INVALID_ORDER_ID,
+                     0,
+                     common::Side::BUY,
+                     102,
+                     20,
+                     common::INVALID_PRIORITY};
   features->onTradeUpdate(&t, book);
   taker->onTradeUpdate(&t, book);
   ASSERT_EQ(outReq->size(), 1u);
   const OrderId buyId = outReq->getNextToRead()->m_orderId;
-  while (outReq->size()) outReq->updateReadIndex();
+  while (outReq->size())
+    outReq->updateReadIndex();
 
-  MEClientResponse acc{ClientResponseType::ACCEPTED, 7, 0, buyId, 500,
-                       common::Side::BUY, 102, 0, 10};
+  ClientResponseImpl acc{ClientResponseType::ACCEPTED,
+                         7,
+                         0,
+                         buyId,
+                         500,
+                         common::Side::BUY,
+                         102,
+                         0,
+                         10};
   taker->onOrderUpdate(&acc);
   EXPECT_EQ(outReq->size(), 0u);
-  EXPECT_EQ(oms->getOMOrderSideMap(0).at(sideToIndex(common::Side::BUY)).m_state,
-            OMOrderState::LIVE);
+  EXPECT_EQ(
+      oms->getOMOrderSideMap(0).at(sideToIndex(common::Side::BUY)).m_state,
+      OMOrderState::LIVE);
 }

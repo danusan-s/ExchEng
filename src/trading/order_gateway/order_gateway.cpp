@@ -5,11 +5,10 @@
 
 namespace trading {
 
-OrderGateway::OrderGateway(ClientId clientId,
-                           exchange::ClientRequestQueue *clientRequestsQueue,
-                           exchange::ClientResponseQueue *clientResponsesQueue,
-                           const std::string &ip, const std::string &iface,
-                           int port)
+OrderGateway::OrderGateway(
+    ClientId clientId, exchange::ClientRequestImplQueue *clientRequestsQueue,
+    exchange::ClientResponseImplQueue *clientResponsesQueue,
+    const std::string &ip, const std::string &iface, int port)
     : m_clientId(clientId), m_ip(ip), m_iface(iface), m_port(port),
       m_outgoingRequests(clientRequestsQueue),
       m_incomingResponses(clientResponsesQueue),
@@ -49,7 +48,7 @@ void OrderGateway::run() noexcept {
          clientReq != nullptr;
          clientReq = m_outgoingRequests->getNextToRead()) {
       m_socket.send(&m_nextOutgoingSeqNum, sizeof(m_nextOutgoingSeqNum));
-      m_socket.send(clientReq, sizeof(exchange::MEClientRequest));
+      m_socket.send(clientReq, sizeof(exchange::ClientRequestImpl));
       m_outgoingRequests->updateReadIndex();
 
       m_nextOutgoingSeqNum++;
@@ -66,12 +65,12 @@ void OrderGateway::recvCallback(common::TCPSocket *socket,
                    __FUNCTION__, socket->m_socketFd,
                    socket->m_nextReceiveValidIndex, rxTime);
 
-  if (socket->m_nextReceiveValidIndex >= sizeof(exchange::OMClientResponse)) {
+  if (socket->m_nextReceiveValidIndex >= sizeof(exchange::ClientResponse)) {
     size_t i = 0;
-    for (; i + sizeof(exchange::OMClientResponse) <=
+    for (; i + sizeof(exchange::ClientResponse) <=
            socket->m_nextReceiveValidIndex;
-         i += sizeof(exchange::OMClientResponse)) {
-      auto clientResp = reinterpret_cast<exchange::OMClientResponse *>(
+         i += sizeof(exchange::ClientResponse)) {
+      auto clientResp = reinterpret_cast<exchange::ClientResponse *>(
           socket->m_inboundData.data() + i);
       m_logger.logData("%:% %() Received client response: %\n", __FILE__,
                        __LINE__, __FUNCTION__, clientResp->toString());

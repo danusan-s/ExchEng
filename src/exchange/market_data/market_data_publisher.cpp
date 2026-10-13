@@ -3,12 +3,10 @@
 #include <cstring>
 
 namespace exchange {
-MarketDataPublisher::MarketDataPublisher(MarketUpdateQueue *outgoingUpdateQueue,
-                                         const std::string &iface,
-                                         const std::string &snapshotIp,
-                                         int snapshotPort,
-                                         const std::string &incrementalUpdateIp,
-                                         int incrementalUpdatePort) noexcept
+MarketDataPublisher::MarketDataPublisher(
+    MarketUpdateImplQueue *outgoingUpdateQueue, const std::string &iface,
+    const std::string &snapshotIp, int snapshotPort,
+    const std::string &incrementalUpdateIp, int incrementalUpdatePort) noexcept
     : m_outgoingUpdateQueue(outgoingUpdateQueue),
       m_logger("market_data_publisher.log"),
       m_incrementalUpdateSocket(m_logger), m_running(false),
@@ -47,18 +45,18 @@ void MarketDataPublisher::stop() {
 }
 
 void MarketDataPublisher::run() noexcept {
-  m_logger.logInfo("%:% %() MarketDataPublisher started\n", __FILE__,
-                   __LINE__, __FUNCTION__);
+  m_logger.logInfo("%:% %() MarketDataPublisher started\n", __FILE__, __LINE__,
+                   __FUNCTION__);
 
   while (m_running.load(std::memory_order_relaxed)) {
     for (auto marketUpdate = m_outgoingUpdateQueue->getNextToRead();
          m_outgoingUpdateQueue->size() && marketUpdate;
          marketUpdate = m_outgoingUpdateQueue->getNextToRead()) {
-      m_logger.logData("%:% %() Publishing market update seq: % %\n",
-                       __FILE__, __LINE__, __FUNCTION__, m_nextOutSeqNum,
+      m_logger.logData("%:% %() Publishing market update seq: % %\n", __FILE__,
+                       __LINE__, __FUNCTION__, m_nextOutSeqNum,
                        marketUpdate->toString());
       m_incrementalUpdateSocket.send(&m_nextOutSeqNum, sizeof(m_nextOutSeqNum));
-      m_incrementalUpdateSocket.send(marketUpdate, sizeof(MEMarketUpdate));
+      m_incrementalUpdateSocket.send(marketUpdate, sizeof(MarketUpdateImpl));
       m_outgoingUpdateQueue->updateReadIndex();
 
       auto nextSnapshotWrite = m_snapshotUpdateQueue.getNextToWriteTo();
@@ -71,8 +69,8 @@ void MarketDataPublisher::run() noexcept {
     m_incrementalUpdateSocket.sendAndRecv();
   }
 
-  m_logger.logInfo("%:% %() MarketDataPublisher stopped\n", __FILE__,
-                   __LINE__, __FUNCTION__);
+  m_logger.logInfo("%:% %() MarketDataPublisher stopped\n", __FILE__, __LINE__,
+                   __FUNCTION__);
 }
 
 } // namespace exchange

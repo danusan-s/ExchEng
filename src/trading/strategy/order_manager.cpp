@@ -16,13 +16,13 @@ const OMOrderSideMap &OrderManager::getOMOrderSideMap(TickerId tickerId) const {
 
 void OrderManager::newOrder(OMOrder *order, TickerId tickerId, Side side,
                             Price price, Quantity qty) noexcept {
-  const exchange::MEClientRequest newRequest{exchange::ClientRequestType::NEW,
-                                             m_tradeEngine->getClientId(),
-                                             tickerId,
-                                             m_nextOrderId,
-                                             side,
-                                             price,
-                                             qty};
+  const exchange::ClientRequestImpl newRequest{exchange::ClientRequestType::NEW,
+                                               m_tradeEngine->getClientId(),
+                                               tickerId,
+                                               m_nextOrderId,
+                                               side,
+                                               price,
+                                               qty};
 
   m_tradeEngine->sendClientRequest(&newRequest);
   *order = OMOrder{tickerId, m_nextOrderId, side,
@@ -34,7 +34,7 @@ void OrderManager::newOrder(OMOrder *order, TickerId tickerId, Side side,
 }
 
 void OrderManager::cancelOrder(OMOrder *order) noexcept {
-  const exchange::MEClientRequest cancelRequest{
+  const exchange::ClientRequestImpl cancelRequest{
       exchange::ClientRequestType::CANCEL,
       m_tradeEngine->getClientId(),
       order->m_tickerId,
@@ -95,7 +95,7 @@ void OrderManager::moveOrders(TickerId tickerId, Price bidPrice, Price askPrice,
 }
 
 void OrderManager::onOrderUpdate(
-    const exchange::MEClientResponse *clientResponse) noexcept {
+    const exchange::ClientResponseImpl *clientResponse) noexcept {
   m_logger->logData("%:% %() Received order update %\n", __FILE__, __LINE__,
                     __FUNCTION__, clientResponse->toString());
   auto &order = m_tickerSideOrders.at(clientResponse->m_tickerId)

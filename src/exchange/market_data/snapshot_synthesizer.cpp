@@ -3,9 +3,10 @@
 #include "common/time_utils.hpp"
 
 namespace exchange {
-SnapshotSynthesizer::SnapshotSynthesizer(
-    MDPMarketUpdateQueue *snapshotUpdateQueue, const std::string &iface,
-    const std::string &ip, int port) noexcept
+SnapshotSynthesizer::SnapshotSynthesizer(MarketUpdateQueue *snapshotUpdateQueue,
+                                         const std::string &iface,
+                                         const std::string &ip,
+                                         int port) noexcept
     : m_snapshotUpdateQueue(snapshotUpdateQueue),
       m_logger("snapshot_synthesizer.log"), m_snapshotSocket(m_logger),
       m_orderPool(ME_MAX_ORDER_IDS) {
@@ -59,7 +60,7 @@ void SnapshotSynthesizer::run() noexcept {
 }
 
 void SnapshotSynthesizer::addToSnapshot(
-    const MDPMarketUpdate *snapshotUpdate) noexcept {
+    const MarketUpdate *snapshotUpdate) noexcept {
   const auto &marketUpdate = snapshotUpdate->m_marketUpdate;
   auto &tickerOrders = m_tickerOrders[marketUpdate.m_tickerId];
   switch (marketUpdate.m_type) {
@@ -115,43 +116,43 @@ void SnapshotSynthesizer::publishSnapshot() noexcept {
   size_t snapshotSize = 0;
   // Order Id reused in snapshot start and end to indicate what incremental seq
   // num the snapshot is based on.
-  const MDPMarketUpdate snapshotStartUpdate{
+  const MarketUpdate snapshotStartUpdate{
       snapshotSize++,
       {MarketUpdateType::SNAPSHOT_START, m_lastIncrementalSeqNum,
        INVALID_TICKER_ID, Side::INVALID, INVALID_PRICE, INVALID_QUANTITY,
        INVALID_PRIORITY}};
 
-  m_snapshotSocket.send(&snapshotStartUpdate, sizeof(MDPMarketUpdate));
+  m_snapshotSocket.send(&snapshotStartUpdate, sizeof(MarketUpdate));
 
   for (size_t tickerId = 0; tickerId < m_tickerOrders.size(); ++tickerId) {
     const auto &tickerOrders = m_tickerOrders.at(tickerId);
 
-    MEMarketUpdate clearUpdate;
+    MarketUpdateImpl clearUpdate;
     clearUpdate.m_type = MarketUpdateType::CLEAR;
     clearUpdate.m_tickerId = tickerId;
 
-    const MDPMarketUpdate snapshotClearUpdate{snapshotSize++, clearUpdate};
+    const MarketUpdate snapshotClearUpdate{snapshotSize++, clearUpdate};
 
-    m_snapshotSocket.send(&snapshotClearUpdate, sizeof(MDPMarketUpdate));
+    m_snapshotSocket.send(&snapshotClearUpdate, sizeof(MarketUpdate));
 
     for (size_t orderId = 0; orderId < tickerOrders.size(); ++orderId) {
       const auto *order = tickerOrders.at(orderId);
       if (order != nullptr) {
-        const MDPMarketUpdate snapshotUpdate{
+        const MarketUpdate snapshotUpdate{
             snapshotSize++,
             {MarketUpdateType::ADD, order->m_marketOrderId, order->m_tickerId,
              order->m_side, order->m_price, order->m_qty, order->m_priority}};
-        m_snapshotSocket.send(&snapshotUpdate, sizeof(MDPMarketUpdate));
+        m_snapshotSocket.send(&snapshotUpdate, sizeof(MarketUpdate));
       }
     }
   }
 
-  const MDPMarketUpdate snapshotEndUpdate{
+  const MarketUpdate snapshotEndUpdate{
       snapshotSize++,
       {MarketUpdateType::SNAPSHOT_END, m_lastIncrementalSeqNum,
        INVALID_TICKER_ID, Side::INVALID, INVALID_PRICE, INVALID_QUANTITY,
        INVALID_PRIORITY}};
-  m_snapshotSocket.send(&snapshotEndUpdate, sizeof(MDPMarketUpdate));
+  m_snapshotSocket.send(&snapshotEndUpdate, sizeof(MarketUpdate));
 
   m_snapshotSocket.sendAndRecv();
   m_logger.logInfo("%:% %() Published snapshot with % updates\n", __FILE__,

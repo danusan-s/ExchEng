@@ -19,7 +19,7 @@ std::string PositionInfo::toString() const {
   return ss.str();
 }
 
-void PositionInfo::addFill(const exchange::MEClientResponse *clientResponse,
+void PositionInfo::addFill(const exchange::ClientResponseImpl *clientResponse,
                            Logger *logger) noexcept {
   const auto oldPosition = m_position;
   const auto sideIdx = sideToIndex(clientResponse->m_side);
@@ -123,7 +123,7 @@ std::string PositionKeeper::toString() const {
 }
 
 void PositionKeeper::addFill(
-    const exchange::MEClientResponse *clientResponse) noexcept {
+    const exchange::ClientResponseImpl *clientResponse) noexcept {
   m_positions.at(clientResponse->m_tickerId).addFill(clientResponse, m_logger);
 }
 

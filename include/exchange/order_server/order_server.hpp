@@ -14,8 +14,8 @@ namespace exchange {
 
 class OrderServer final {
 public:
-  OrderServer(ClientRequestQueue *clientRequestQueue,
-              ClientResponseQueue *clientResponseQueue,
+  OrderServer(ClientRequestImplQueue *clientRequestQueue,
+              ClientResponseImplQueue *clientResponseQueue,
               const std::string &iface, int port) noexcept;
 
   ~OrderServer() noexcept;
@@ -34,7 +34,7 @@ private:
   const std::string m_iface;
   const int m_port;
 
-  ClientResponseQueue *m_clientResponseQueue = nullptr;
+  ClientResponseImplQueue *m_clientResponseQueue = nullptr;
 
   Logger m_logger;
 

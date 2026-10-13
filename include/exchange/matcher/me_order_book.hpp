@@ -50,8 +50,8 @@ private:
   MemPool<MEOrder> m_ordersPool;
 
   // Temporary objects to avoid allocation for each response and market update
-  MEClientResponse m_clientResponse;
-  MEMarketUpdate m_marketUpdate;
+  ClientResponseImpl m_clientResponse;
+  MarketUpdateImpl m_marketUpdate;
 
   OrderId m_nextMarketOrderId = 1;
 

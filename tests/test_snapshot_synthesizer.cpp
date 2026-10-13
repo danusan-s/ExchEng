@@ -8,13 +8,13 @@ using namespace exchange;
 // Each test uses a fresh synthesizer (own seq counter + order map).
 class SnapshotTest : public ::testing::Test {
 protected:
-  MDPMarketUpdateQueue *queue = nullptr;
+  MarketUpdateQueue *queue = nullptr;
   common::Logger *logger = nullptr;
   SnapshotSynthesizer *synth = nullptr;
   static int portCounter;
 
   void SetUp() override {
-    queue = new MDPMarketUpdateQueue(1024);
+    queue = new MarketUpdateQueue(1024);
     logger = new common::Logger("test_snapshot.log");
     // Fresh socket per test on loopback with a distinct port.
     synth = new SnapshotSynthesizer(queue, "lo", "239.0.0.1",
@@ -30,15 +30,13 @@ protected:
     queue = nullptr;
   }
 
-  MDPMarketUpdate makeUpdate(size_t seq, MarketUpdateType type, OrderId oid,
-                             TickerId t = 0,
-                             common::Side s = common::Side::BUY,
-                             common::Price p = 100,
-                             common::Quantity q = 10,
-                             common::Priority pr = 1) {
-    MDPMarketUpdate u;
+  MarketUpdate makeUpdate(size_t seq, MarketUpdateType type, OrderId oid,
+                          TickerId t = 0, common::Side s = common::Side::BUY,
+                          common::Price p = 100, common::Quantity q = 10,
+                          common::Priority pr = 1) {
+    MarketUpdate u;
     u.m_seqNum = seq;
-    u.m_marketUpdate = MEMarketUpdate{type, oid, t, s, p, q, pr};
+    u.m_marketUpdate = MarketUpdateImpl{type, oid, t, s, p, q, pr};
     return u;
   }
 };
@@ -60,8 +58,8 @@ TEST_F(SnapshotTest, AddIsTrackedAndAdvancesSequence) {
 TEST_F(SnapshotTest, ModifyUpdatesTrackedOrder) {
   auto add = makeUpdate(1, MarketUpdateType::ADD, 5);
   synth->addToSnapshot(&add);
-  auto mod = makeUpdate(2, MarketUpdateType::MODIFY, 5, 0,
-                        common::Side::BUY, 101, 7, 1);
+  auto mod = makeUpdate(2, MarketUpdateType::MODIFY, 5, 0, common::Side::BUY,
+                        101, 7, 1);
   synth->addToSnapshot(&mod);
   EXPECT_EQ(synth->getLastSeqNum(), 2u);
   const auto *tracked = synth->getSnapshotOrder(0, 5);

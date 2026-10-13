@@ -11,18 +11,18 @@ namespace exchange {
 
 class MatchingEngine final {
 public:
-  MatchingEngine(ClientRequestQueue *clientRequestQueue,
-                 ClientResponseQueue *clientResponseQueue,
-                 MarketUpdateQueue *marketUpdateQueue) noexcept;
+  MatchingEngine(ClientRequestImplQueue *clientRequestQueue,
+                 ClientResponseImplQueue *clientResponseQueue,
+                 MarketUpdateImplQueue *marketUpdateQueue) noexcept;
 
   ~MatchingEngine() noexcept;
 
   void start();
   void stop();
   void run() noexcept;
-  void processClientRequest(const MEClientRequest *meClientRequest) noexcept;
-  void sendClientResponse(const MEClientResponse *meClientResponse) noexcept;
-  void sendMarketUpdate(const MEMarketUpdate *meMarketUpdate) noexcept;
+  void processClientRequest(const ClientRequestImpl *meClientRequest) noexcept;
+  void sendClientResponse(const ClientResponseImpl *meClientResponse) noexcept;
+  void sendMarketUpdate(const MarketUpdateImpl *meMarketUpdate) noexcept;
 
   MatchingEngine() = delete;
   MatchingEngine(const MatchingEngine &) = delete;
@@ -34,13 +34,13 @@ private:
   OrderBookHashMap m_tickerOrderBooks;
 
   // Incoming request from the order gateway to the matching engine
-  ClientRequestQueue *m_clientRequestQueue = nullptr;
+  ClientRequestImplQueue *m_clientRequestQueue = nullptr;
 
   // Outgoing response from the matching engine to the order gateway
-  ClientResponseQueue *m_clientResponseQueue = nullptr;
+  ClientResponseImplQueue *m_clientResponseQueue = nullptr;
 
   // Outgoing market update from the matching engine to the market data gateway
-  MarketUpdateQueue *m_marketUpdateQueue = nullptr;
+  MarketUpdateImplQueue *m_marketUpdateQueue = nullptr;
 
   Logger m_logger;
 

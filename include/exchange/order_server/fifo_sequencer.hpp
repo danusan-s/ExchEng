@@ -11,7 +11,7 @@ constexpr size_t MAX_ME_PENDING_REQUESTS = 1024;
 
 class FIFOSequencer final {
 public:
-  FIFOSequencer(ClientRequestQueue *clientRequestQueue, Logger *logger)
+  FIFOSequencer(ClientRequestImplQueue *clientRequestQueue, Logger *logger)
       : m_clientRequestQueue(clientRequestQueue), m_logger(logger) {
   }
   ~FIFOSequencer() = default;
@@ -23,16 +23,16 @@ public:
   FIFOSequencer &operator=(FIFOSequencer &&) = delete;
 
   void addClientRequest(Nanos recvTime,
-                        const MEClientRequest &clientRequest) noexcept;
+                        const ClientRequestImpl &clientRequest) noexcept;
   void sequenceAndPublish() noexcept;
 
 private:
-  ClientRequestQueue *m_clientRequestQueue = nullptr;
+  ClientRequestImplQueue *m_clientRequestQueue = nullptr;
   Logger *m_logger = nullptr;
 
   struct RecvTimeClientRequest {
     Nanos m_recvTime = 0;
-    MEClientRequest m_clientRequest;
+    ClientRequestImpl m_clientRequest;
 
     auto operator<(const RecvTimeClientRequest &other) const noexcept {
       return m_recvTime < other.m_recvTime;

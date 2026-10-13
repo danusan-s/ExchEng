@@ -35,8 +35,9 @@ void LiquidityTaker::onOrderBookUpdate(TickerId tickerId, Price price,
   // Liquidity taker does not place orders on order book updates
 }
 
-void LiquidityTaker::onTradeUpdate(const exchange::MEMarketUpdate *marketUpdate,
-                                   const MarketOrderBook *orderBook) noexcept {
+void LiquidityTaker::onTradeUpdate(
+    const exchange::MarketUpdateImpl *marketUpdate,
+    const MarketOrderBook *orderBook) noexcept {
   m_logger->logData("%:% %() Received trade update %\n", __FILE__, __LINE__,
                     __FUNCTION__, marketUpdate->toString());
   const auto bbo = orderBook->getBBO();
@@ -66,7 +67,7 @@ void LiquidityTaker::onTradeUpdate(const exchange::MEMarketUpdate *marketUpdate,
 }
 
 void LiquidityTaker::onOrderUpdate(
-    const exchange::MEClientResponse *clientResponse) noexcept {
+    const exchange::ClientResponseImpl *clientResponse) noexcept {
   m_logger->logData("%:% %() Received order update %\n", __FILE__, __LINE__,
                     __FUNCTION__, clientResponse->toString());
   m_orderManager->onOrderUpdate(clientResponse);

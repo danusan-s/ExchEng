@@ -4,8 +4,8 @@
 
 namespace exchange {
 
-OrderServer::OrderServer(ClientRequestQueue *clientRequestQueue,
-                         ClientResponseQueue *clientResponseQueue,
+OrderServer::OrderServer(ClientRequestImplQueue *clientRequestQueue,
+                         ClientResponseImplQueue *clientResponseQueue,
                          const std::string &iface, int port) noexcept
     : m_iface(iface), m_port(port), m_clientResponseQueue(clientResponseQueue),
       m_logger("order_server.log"), m_tcpServer(m_logger),
@@ -42,8 +42,8 @@ void OrderServer::stop() {
 }
 
 void OrderServer::run() noexcept {
-  m_logger.logInfo("%:% %() OrderServer started on iface:% port:%\n",
-                   __FILE__, __LINE__, __FUNCTION__, m_iface, m_port);
+  m_logger.logInfo("%:% %() OrderServer started on iface:% port:%\n", __FILE__,
+                   __LINE__, __FUNCTION__, m_iface, m_port);
 
   while (m_running.load(std::memory_order_relaxed)) {
     m_tcpServer.poll();
@@ -54,11 +54,10 @@ void OrderServer::run() noexcept {
          clientResponse = m_clientResponseQueue->getNextToRead()) {
       auto &nextOutSeqNum = m_cidNextOutSeqNum[clientResponse->m_clientId];
 
-      m_logger.logData(
-          "%:% %() Sending response to ClientId: % seqNum: % %\n", __FILE__,
-          __LINE__, __FUNCTION__,
-          clientResponse->m_clientId, nextOutSeqNum,
-          clientResponse->toString().c_str());
+      m_logger.logData("%:% %() Sending response to ClientId: % seqNum: % %\n",
+                       __FILE__, __LINE__, __FUNCTION__,
+                       clientResponse->m_clientId, nextOutSeqNum,
+                       clientResponse->toString().c_str());
 
       auto socket = m_cidSockets[clientResponse->m_clientId];
 
@@ -66,7 +65,7 @@ void OrderServer::run() noexcept {
                                     std::to_string(clientResponse->m_clientId));
 
       socket->send(&nextOutSeqNum, sizeof(nextOutSeqNum));
-      socket->send(clientResponse, sizeof(MEClientResponse));
+      socket->send(clientResponse, sizeof(ClientResponseImpl));
 
       ++nextOutSeqNum;
       m_clientResponseQueue->updateReadIndex();
@@ -78,20 +77,19 @@ void OrderServer::run() noexcept {
 }
 
 void OrderServer::recvCallback(TCPSocket *socket, Nanos rxTime) noexcept {
-  m_logger.logInfo("%:% %() Received data from socket % at time %\n",
-                   __FILE__, __LINE__, __FUNCTION__, socket->m_socketFd,
-                   rxTime);
+  m_logger.logInfo("%:% %() Received data from socket % at time %\n", __FILE__,
+                   __LINE__, __FUNCTION__, socket->m_socketFd, rxTime);
 
-  if (socket->m_nextReceiveValidIndex > sizeof(OMClientRequest)) {
+  if (socket->m_nextReceiveValidIndex > sizeof(ClientRequest)) {
     size_t i = 0;
-    for (; i + sizeof(OMClientRequest) <= socket->m_nextReceiveValidIndex;
-         i += sizeof(OMClientRequest)) {
-      const auto *request = reinterpret_cast<const OMClientRequest *>(
+    for (; i + sizeof(ClientRequest) <= socket->m_nextReceiveValidIndex;
+         i += sizeof(ClientRequest)) {
+      const auto *request = reinterpret_cast<const ClientRequest *>(
           socket->m_inboundData.data() + i);
 
       m_logger.logData("%:% %() Processing request from socket %: %\n",
-                       __FILE__, __LINE__, __FUNCTION__,
-                       socket->m_socketFd, request->toString());
+                       __FILE__, __LINE__, __FUNCTION__, socket->m_socketFd,
+                       request->toString());
 
       // First request from client
       if (m_cidSockets[request->m_request.m_clientId] == nullptr) [[unlikely]] {
@@ -102,8 +100,8 @@ void OrderServer::recvCallback(TCPSocket *socket, Nanos rxTime) noexcept {
         m_logger.logError(
             "%:% %() Received request from ClientId: % on different "
             "socket: % expected: %\n",
-            __FILE__, __LINE__, __FUNCTION__,
-            request->m_request.m_clientId, socket->m_socketFd,
+            __FILE__, __LINE__, __FUNCTION__, request->m_request.m_clientId,
+            socket->m_socketFd,
             m_cidSockets[request->m_request.m_clientId]->m_socketFd);
         continue;
       }

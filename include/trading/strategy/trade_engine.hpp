@@ -20,9 +20,9 @@ class TradeEngine final {
 public:
   TradeEngine(ClientId clientId, AlgoType algoType,
               const TradeEngineConfigMap &tickerConfig,
-              exchange::ClientRequestQueue *outgoingClientRequests,
-              exchange::ClientResponseQueue *incomingClientResponses,
-              exchange::MarketUpdateQueue *incomingMarketUpdates);
+              exchange::ClientRequestImplQueue *outgoingClientRequests,
+              exchange::ClientResponseImplQueue *incomingClientResponses,
+              exchange::MarketUpdateImplQueue *incomingMarketUpdates);
   ~TradeEngine();
 
   void start();
@@ -30,26 +30,28 @@ public:
   void run() noexcept;
 
   void
-  sendClientRequest(const exchange::MEClientRequest *clientRequest) noexcept;
+  sendClientRequest(const exchange::ClientRequestImpl *clientRequest) noexcept;
 
   void onOrderBookUpdate(TickerId tickerId, Price price, Side side,
                          const MarketOrderBook *orderBook) noexcept;
-  void onTradeUpdate(const exchange::MEMarketUpdate *marketUpdate,
+  void onTradeUpdate(const exchange::MarketUpdateImpl *marketUpdate,
                      const MarketOrderBook *orderBook) noexcept;
-  void onOrderUpdate(const exchange::MEClientResponse *clientResponse) noexcept;
+  void
+  onOrderUpdate(const exchange::ClientResponseImpl *clientResponse) noexcept;
 
   void defaultAlgoOnOrderBookUpdate(TickerId tickerId, Price price, Side side,
                                     const MarketOrderBook *orderBook) noexcept;
-  void defaultAlgoOnTradeUpdate(const exchange::MEMarketUpdate *marketUpdate,
+  void defaultAlgoOnTradeUpdate(const exchange::MarketUpdateImpl *marketUpdate,
                                 const MarketOrderBook *orderBook) noexcept;
   void defaultAlgoOnOrderUpdate(
-      const exchange::MEClientResponse *clientResponse) noexcept;
+      const exchange::ClientResponseImpl *clientResponse) noexcept;
 
   std::function<void(TickerId, Price, Side, const MarketOrderBook *)>
       m_algoOnOrderBookUpdate;
-  std::function<void(const exchange::MEMarketUpdate *, const MarketOrderBook *)>
+  std::function<void(const exchange::MarketUpdateImpl *,
+                     const MarketOrderBook *)>
       m_algoOnTradeUpdate;
-  std::function<void(const exchange::MEClientResponse *)> m_algoOnOrderUpdate;
+  std::function<void(const exchange::ClientResponseImpl *)> m_algoOnOrderUpdate;
 
   ClientId getClientId() const noexcept {
     return m_clientId;
@@ -84,9 +86,9 @@ private:
 
   MarketOrderBookMap m_tickerOrderBooks;
 
-  exchange::ClientRequestQueue *m_outgoingClientRequests = nullptr;
-  exchange::ClientResponseQueue *m_incomingClientResponses = nullptr;
-  exchange::MarketUpdateQueue *m_incomingMarketUpdates = nullptr;
+  exchange::ClientRequestImplQueue *m_outgoingClientRequests = nullptr;
+  exchange::ClientResponseImplQueue *m_incomingClientResponses = nullptr;
+  exchange::MarketUpdateImplQueue *m_incomingMarketUpdates = nullptr;
 
   Nanos m_lastEventTime = 0;
 

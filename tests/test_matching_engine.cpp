@@ -8,16 +8,16 @@ using namespace exchange;
 // Shared engine; each test uses a distinct ticker to stay isolated.
 class MatchingEngineTest : public ::testing::Test {
 protected:
-  static ClientRequestQueue *reqQ;
-  static ClientResponseQueue *respQ;
-  static MarketUpdateQueue *mdQ;
+  static ClientRequestImplQueue *reqQ;
+  static ClientResponseImplQueue *respQ;
+  static MarketUpdateImplQueue *mdQ;
   static common::Logger *logger;
   static MatchingEngine *engine;
 
   static void SetUpTestSuite() {
-    reqQ = new ClientRequestQueue(4096);
-    respQ = new ClientResponseQueue(4096);
-    mdQ = new MarketUpdateQueue(4096);
+    reqQ = new ClientRequestImplQueue(4096);
+    respQ = new ClientResponseImplQueue(4096);
+    mdQ = new MarketUpdateImplQueue(4096);
     logger = new common::Logger("test_matching_engine.log");
     engine = new MatchingEngine(reqQ, respQ, mdQ);
   }
@@ -33,20 +33,23 @@ protected:
   }
 
   void SetUp() override {
-    while (respQ->size()) respQ->updateReadIndex();
-    while (mdQ->size()) mdQ->updateReadIndex();
-    while (reqQ->size()) reqQ->updateReadIndex();
+    while (respQ->size())
+      respQ->updateReadIndex();
+    while (mdQ->size())
+      mdQ->updateReadIndex();
+    while (reqQ->size())
+      reqQ->updateReadIndex();
   }
 
-  MEClientRequest makeNew(TickerId t, ClientId c, OrderId o, common::Side s,
-                          common::Price p, common::Quantity q) {
-    return MEClientRequest{ClientRequestType::NEW, c, t, o, s, p, q};
+  ClientRequestImpl makeNew(TickerId t, ClientId c, OrderId o, common::Side s,
+                            common::Price p, common::Quantity q) {
+    return ClientRequestImpl{ClientRequestType::NEW, c, t, o, s, p, q};
   }
 };
 
-ClientRequestQueue *MatchingEngineTest::reqQ = nullptr;
-ClientResponseQueue *MatchingEngineTest::respQ = nullptr;
-MarketUpdateQueue *MatchingEngineTest::mdQ = nullptr;
+ClientRequestImplQueue *MatchingEngineTest::reqQ = nullptr;
+ClientResponseImplQueue *MatchingEngineTest::respQ = nullptr;
+MarketUpdateImplQueue *MatchingEngineTest::mdQ = nullptr;
 common::Logger *MatchingEngineTest::logger = nullptr;
 MatchingEngine *MatchingEngineTest::engine = nullptr;
 
@@ -65,11 +68,13 @@ TEST_F(MatchingEngineTest, NewRequestProducesAcceptedAndAdd) {
 TEST_F(MatchingEngineTest, CancelRequestRemovesRestingOrder) {
   auto req = makeNew(1, 1, 21, common::Side::BUY, 100, 10);
   engine->processClientRequest(&req);
-  while (respQ->size()) respQ->updateReadIndex();
-  while (mdQ->size()) mdQ->updateReadIndex();
+  while (respQ->size())
+    respQ->updateReadIndex();
+  while (mdQ->size())
+    mdQ->updateReadIndex();
 
-  MEClientRequest cancel{ClientRequestType::CANCEL, 1, 1, 21,
-                         common::Side::INVALID, 0, 0};
+  ClientRequestImpl cancel{ClientRequestType::CANCEL, 1, 1, 21,
+                           common::Side::INVALID,     0, 0};
   engine->processClientRequest(&cancel);
 
   ASSERT_GE(respQ->size(), 1u);
@@ -78,14 +83,15 @@ TEST_F(MatchingEngineTest, CancelRequestRemovesRestingOrder) {
 
 // Verifies crossing NEW requests match through the engine queues.
 TEST_F(MatchingEngineTest, CrossingOrdersMatchThroughEngine) {
-  engine->processClientRequest(
-      new MEClientRequest{ClientRequestType::NEW, 1, 2, 31,
-                          common::Side::BUY, 100, 10});
-  while (respQ->size()) respQ->updateReadIndex();
-  while (mdQ->size()) mdQ->updateReadIndex();
+  engine->processClientRequest(new ClientRequestImpl{
+      ClientRequestType::NEW, 1, 2, 31, common::Side::BUY, 100, 10});
+  while (respQ->size())
+    respQ->updateReadIndex();
+  while (mdQ->size())
+    mdQ->updateReadIndex();
 
-  auto take = MEClientRequest{ClientRequestType::NEW, 2, 2, 32,
-                              common::Side::SELL, 100, 10};
+  auto take = ClientRequestImpl{ClientRequestType::NEW, 2,   2, 32,
+                                common::Side::SELL,     100, 10};
   engine->processClientRequest(&take);
 
   // ACCEPTED + 2x FILLED expected on the response queue.
@@ -99,8 +105,8 @@ TEST_F(MatchingEngineTest, CrossingOrdersMatchThroughEngine) {
 // FATALs (exits) on invalid types. This codebase logs and ignores so a bad
 // client cannot crash the engine.
 TEST_F(MatchingEngineTest, InvalidRequestTypeIsIgnored) {
-  auto req = MEClientRequest{ClientRequestType::INVALID, 1, 3, 41,
-                             common::Side::BUY, 100, 10};
+  auto req = ClientRequestImpl{ClientRequestType::INVALID, 1,   3, 41,
+                               common::Side::BUY,          100, 10};
   engine->processClientRequest(&req);
   EXPECT_EQ(respQ->size(), 0u);
   EXPECT_EQ(mdQ->size(), 0u);
@@ -108,8 +114,15 @@ TEST_F(MatchingEngineTest, InvalidRequestTypeIsIgnored) {
 
 // Verifies sendClientResponse enqueues exactly one response.
 TEST_F(MatchingEngineTest, SendClientResponseEnqueuesOne) {
-  MEClientResponse r{ClientResponseType::ACCEPTED, 5, 4, 51, 900,
-                     common::Side::BUY, 100, 0, 10};
+  ClientResponseImpl r{ClientResponseType::ACCEPTED,
+                       5,
+                       4,
+                       51,
+                       900,
+                       common::Side::BUY,
+                       100,
+                       0,
+                       10};
   engine->sendClientResponse(&r);
   ASSERT_EQ(respQ->size(), 1u);
   EXPECT_EQ(respQ->getNextToRead()->m_clientOrderId, 51u);
@@ -117,8 +130,8 @@ TEST_F(MatchingEngineTest, SendClientResponseEnqueuesOne) {
 
 // Verifies sendMarketUpdate enqueues exactly one update.
 TEST_F(MatchingEngineTest, SendMarketUpdateEnqueuesOne) {
-  MEMarketUpdate u{MarketUpdateType::ADD, 900, 4, common::Side::BUY, 100, 10,
-                   1};
+  MarketUpdateImpl u{
+      MarketUpdateType::ADD, 900, 4, common::Side::BUY, 100, 10, 1};
   engine->sendMarketUpdate(&u);
   ASSERT_EQ(mdQ->size(), 1u);
   EXPECT_EQ(mdQ->getNextToRead()->m_qty, 10u);
@@ -135,25 +148,31 @@ TEST_F(MatchingEngineTest, TickersAreIndependent) {
   size_t fills = 0;
   size_t adds = 0;
   for (auto *r = respQ->getNextToRead(); r;) {
-    if (r->m_type == ClientResponseType::FILLED) ++fills;
-    if (r->m_type == ClientResponseType::ACCEPTED) ++adds;
+    if (r->m_type == ClientResponseType::FILLED)
+      ++fills;
+    if (r->m_type == ClientResponseType::ACCEPTED)
+      ++adds;
     respQ->updateReadIndex();
     r = respQ->getNextToRead();
   }
   EXPECT_EQ(fills, 0u);
   EXPECT_EQ(adds, 2u);
-  while (mdQ->size()) mdQ->updateReadIndex();
+  while (mdQ->size())
+    mdQ->updateReadIndex();
 
   // Positive control: same prices on ticker 7 DO cross and fill.
   auto bid2 = makeNew(7, 1, 71, common::Side::BUY, 100, 10);
   engine->processClientRequest(&bid2);
-  while (respQ->size()) respQ->updateReadIndex();
-  while (mdQ->size()) mdQ->updateReadIndex();
+  while (respQ->size())
+    respQ->updateReadIndex();
+  while (mdQ->size())
+    mdQ->updateReadIndex();
   auto ask2 = makeNew(7, 2, 72, common::Side::SELL, 100, 10);
   engine->processClientRequest(&ask2);
   size_t fills2 = 0;
   for (auto *r = respQ->getNextToRead(); r;) {
-    if (r->m_type == ClientResponseType::FILLED) ++fills2;
+    if (r->m_type == ClientResponseType::FILLED)
+      ++fills2;
     respQ->updateReadIndex();
     r = respQ->getNextToRead();
   }

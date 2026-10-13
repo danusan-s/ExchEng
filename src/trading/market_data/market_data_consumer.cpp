@@ -4,7 +4,8 @@
 namespace trading {
 
 MarketDataConsumer::MarketDataConsumer(
-    common::ClientId clientId, exchange::MarketUpdateQueue *marketUpdateQueue,
+    common::ClientId clientId,
+    exchange::MarketUpdateImplQueue *marketUpdateQueue,
     const std::string &iface, const std::string &snapshotIp, int snapshotPort,
     const std::string &incrementalIp, int incrementalPort)
     : m_marketUpdateQueue(marketUpdateQueue),
@@ -16,7 +17,7 @@ MarketDataConsumer::MarketDataConsumer(
 
   m_incrementalSocket.m_recvCallback = callback;
   ASSERT(m_incrementalSocket.init(incrementalIp, m_iface, incrementalPort,
-                                   true) >= 0,
+                                  true) >= 0,
          "Failed to initialize incremental socket. Error: " +
              std::string(strerror(errno)));
 
@@ -72,18 +73,18 @@ void MarketDataConsumer::recvCallback(common::MulticastSocket *socket) {
     return;
   }
 
-  if (socket->m_nextReceiveValidIndex >= sizeof(exchange::MDPMarketUpdate)) {
+  if (socket->m_nextReceiveValidIndex >= sizeof(exchange::MarketUpdate)) {
     size_t i = 0;
-    for (; i + sizeof(exchange::MDPMarketUpdate) <=
-           socket->m_nextReceiveValidIndex;
-         i += sizeof(exchange::MDPMarketUpdate)) {
-      auto request = reinterpret_cast<exchange::MDPMarketUpdate *>(
+    for (;
+         i + sizeof(exchange::MarketUpdate) <= socket->m_nextReceiveValidIndex;
+         i += sizeof(exchange::MarketUpdate)) {
+      auto request = reinterpret_cast<exchange::MarketUpdate *>(
           socket->m_inboundData.data() + i);
 
       m_logger.logData("%:% %() Received % socket with len % : % \n", __FILE__,
                        __LINE__, __FUNCTION__,
                        (isSnapshotSocket ? "snapshot" : "incremental"),
-                       sizeof(exchange::MDPMarketUpdate), request->toString());
+                       sizeof(exchange::MarketUpdate), request->toString());
 
       const bool alreadyInRecovery = m_inRecovery;
       m_inRecovery =
@@ -127,7 +128,7 @@ void MarketDataConsumer::startSnapshotSync() {
 }
 
 void MarketDataConsumer::queueMessage(
-    bool isSnapshot, const exchange::MDPMarketUpdate *marketUpdate) {
+    bool isSnapshot, const exchange::MarketUpdate *marketUpdate) {
   if (isSnapshot) {
     if (m_queuedSnapshotUpdates.find(marketUpdate->m_seqNum) !=
         m_queuedSnapshotUpdates.end()) {
@@ -166,7 +167,7 @@ void MarketDataConsumer::checkSnapshotSync() {
     return;
   }
 
-  std::vector<exchange::MEMarketUpdate> orderedSnapshotUpdates;
+  std::vector<exchange::MarketUpdateImpl> orderedSnapshotUpdates;
 
   bool haveCompleteSnapshot = true;
   size_t nextExpectedSeqNum = 0;

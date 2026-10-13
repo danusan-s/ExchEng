@@ -27,7 +27,7 @@ public:
 
   void setTradeEngine(TradeEngine *tradeEngine);
 
-  void onMarketUpdate(const exchange::MEMarketUpdate *marketUpdate) noexcept;
+  void onMarketUpdate(const exchange::MarketUpdateImpl *marketUpdate) noexcept;
 
   void addOrderToBook(MarketOrder *order) noexcept;
   void removeOrderFromBook(MarketOrder *order) noexcept;

@@ -97,18 +97,18 @@ int main(int argc, char **argv) {
       common::ME_MAX_MARKET_UPDATES, common::ME_MAX_ORDER_IDS,
       common::ME_MAX_PRICE_LEVELS, common::LOG_QUEUE_SIZE);
 
-  exchange::ClientRequestQueue *clientRequestsQueue =
-      new exchange::ClientRequestQueue(ME_MAX_CLIENT_UPDATES);
+  exchange::ClientRequestImplQueue *clientRequestsQueue =
+      new exchange::ClientRequestImplQueue(ME_MAX_CLIENT_UPDATES);
   g_logger->logInfo("%:% %() Created ClientRequestQueue capacity:%\n", __FILE__,
                     __LINE__, __FUNCTION__, ME_MAX_CLIENT_UPDATES);
 
-  exchange::ClientResponseQueue *clientResponsesQueue =
-      new exchange::ClientResponseQueue(ME_MAX_CLIENT_UPDATES);
+  exchange::ClientResponseImplQueue *clientResponsesQueue =
+      new exchange::ClientResponseImplQueue(ME_MAX_CLIENT_UPDATES);
   g_logger->logInfo("%:% %() Created ClientResponseQueue capacity:%\n",
                     __FILE__, __LINE__, __FUNCTION__, ME_MAX_CLIENT_UPDATES);
 
-  exchange::MarketUpdateQueue *marketUpdateQueue =
-      new exchange::MarketUpdateQueue(ME_MAX_MARKET_UPDATES);
+  exchange::MarketUpdateImplQueue *marketUpdateQueue =
+      new exchange::MarketUpdateImplQueue(ME_MAX_MARKET_UPDATES);
   g_logger->logInfo("%:% %() Created MarketUpdateQueue capacity:%\n", __FILE__,
                     __LINE__, __FUNCTION__, ME_MAX_MARKET_UPDATES);
 
@@ -165,7 +165,7 @@ int main(int argc, char **argv) {
     g_logger->logInfo("%:% %() Starting RANDOM order flow\n", __FILE__,
                       __LINE__, __FUNCTION__);
     common::OrderId orderId = clientId * 1000;
-    std::vector<exchange::MEClientRequest> requests;
+    std::vector<exchange::ClientRequestImpl> requests;
     std::array<Price, ME_MAX_TICKERS> prices;
     for (TickerId i = 0; i < ME_MAX_TICKERS; ++i) {
       prices.at(i) = (rand() % 100) + 100;
@@ -178,13 +178,13 @@ int main(int argc, char **argv) {
       const Price price = prices.at(tickerId) + (rand() % 10) + 1;
       const Quantity qty = (rand() % 100) + 1;
       const Side side = (rand() % 2 == 0) ? Side::BUY : Side::SELL;
-      exchange::MEClientRequest request{exchange::ClientRequestType::NEW,
-                                        clientId,
-                                        tickerId,
-                                        orderId++,
-                                        side,
-                                        price,
-                                        qty};
+      exchange::ClientRequestImpl request{exchange::ClientRequestType::NEW,
+                                          clientId,
+                                          tickerId,
+                                          orderId++,
+                                          side,
+                                          price,
+                                          qty};
       g_tradeEngine->sendClientRequest(&request);
       usleep(20 * 1000);
 

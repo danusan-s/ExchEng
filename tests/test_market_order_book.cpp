@@ -15,9 +15,9 @@ using namespace exchange;
 
 class TradingBookTest : public ::testing::Test {
 protected:
-  static ClientRequestQueue *outReq;
-  static ClientResponseQueue *inResp;
-  static MarketUpdateQueue *inMd;
+  static ClientRequestImplQueue *outReq;
+  static ClientResponseImplQueue *inResp;
+  static MarketUpdateImplQueue *inMd;
   static common::Logger *engLogger;
   static TradeEngine *engine;
   static common::Logger *bookLogger;
@@ -28,9 +28,9 @@ protected:
   MarketOrderBook *book = nullptr;
 
   static void SetUpTestSuite() {
-    outReq = new ClientRequestQueue(4096);
-    inResp = new ClientResponseQueue(4096);
-    inMd = new MarketUpdateQueue(4096);
+    outReq = new ClientRequestImplQueue(4096);
+    inResp = new ClientResponseImplQueue(4096);
+    inMd = new MarketUpdateImplQueue(4096);
     engLogger = new common::Logger("test_trading_book_eng.log");
     TradeEngineConfigMap cfg{};
     engine = new TradeEngine(1, AlgoType::INVALID, cfg, outReq, inResp, inMd);
@@ -63,21 +63,22 @@ protected:
     book = nullptr;
   }
 
-  MEMarketUpdate addUpd(OrderId oid, common::Side s, Price p, Quantity q,
-                        Priority pr = 1) {
-    return MEMarketUpdate{MarketUpdateType::ADD, oid, 0, s, p, q, pr};
+  MarketUpdateImpl addUpd(OrderId oid, common::Side s, Price p, Quantity q,
+                          Priority pr = 1) {
+    return MarketUpdateImpl{MarketUpdateType::ADD, oid, 0, s, p, q, pr};
   }
 };
 
-ClientRequestQueue *TradingBookTest::outReq = nullptr;
-ClientResponseQueue *TradingBookTest::inResp = nullptr;
-MarketUpdateQueue *TradingBookTest::inMd = nullptr;
+ClientRequestImplQueue *TradingBookTest::outReq = nullptr;
+ClientResponseImplQueue *TradingBookTest::inResp = nullptr;
+MarketUpdateImplQueue *TradingBookTest::inMd = nullptr;
 common::Logger *TradingBookTest::engLogger = nullptr;
 TradeEngine *TradingBookTest::engine = nullptr;
 common::Logger *TradingBookTest::bookLogger = nullptr;
 std::vector<MarketOrderBook *> TradingBookTest::retired{};
 
-// Verifies the first update on an empty side leaves BBO invalid (book only refreshes BBO when the side already exists).
+// Verifies the first update on an empty side leaves BBO invalid (book only
+// refreshes BBO when the side already exists).
 TEST_F(TradingBookTest, FirstBidLeavesBboInvalid) {
   auto u = addUpd(1, common::Side::BUY, 100, 10);
   book->onMarketUpdate(&u);
@@ -119,8 +120,8 @@ TEST_F(TradingBookTest, BidQtyAggregatesAtSamePrice) {
 TEST_F(TradingBookTest, ModifyUpdatesQtyAndBbo) {
   auto u = addUpd(1, common::Side::BUY, 100, 10);
   book->onMarketUpdate(&u);
-  MEMarketUpdate mod{MarketUpdateType::MODIFY, 1, 0, common::Side::BUY,
-                     100, 4, 1};
+  MarketUpdateImpl mod{
+      MarketUpdateType::MODIFY, 1, 0, common::Side::BUY, 100, 4, 1};
   book->onMarketUpdate(&mod);
   EXPECT_EQ(book->getBBO()->m_bidQty, 4u);
 }
@@ -138,14 +139,14 @@ TEST_F(TradingBookTest, ModifyIgnoresPriceChange) {
   ASSERT_EQ(book->getBBO()->m_bidQty, 17u);
   // MODIFY qty to 4 but claim price 99: stored qty updates, price level and
   // BBO do not (bidChanged = 99 >= 100 is false).
-  MEMarketUpdate mod{MarketUpdateType::MODIFY, 1, 0, common::Side::BUY,
-                     99, 4, 1};
+  MarketUpdateImpl mod{
+      MarketUpdateType::MODIFY, 1, 0, common::Side::BUY, 99, 4, 1};
   book->onMarketUpdate(&mod);
   EXPECT_EQ(book->getBBO()->m_bidPrice, 100u);
   EXPECT_EQ(book->getBBO()->m_bidQty, 17u);
   // A same-price MODIFY does refresh and shows the new qty.
-  MEMarketUpdate mod2{MarketUpdateType::MODIFY, 1, 0, common::Side::BUY,
-                      100, 4, 1};
+  MarketUpdateImpl mod2{
+      MarketUpdateType::MODIFY, 1, 0, common::Side::BUY, 100, 4, 1};
   book->onMarketUpdate(&mod2);
   EXPECT_EQ(book->getBBO()->m_bidQty, 11u); // 4 + 7.
 }
@@ -154,8 +155,8 @@ TEST_F(TradingBookTest, ModifyIgnoresPriceChange) {
 TEST_F(TradingBookTest, CancelLastOrderClearsLevel) {
   auto u = addUpd(1, common::Side::BUY, 100, 10);
   book->onMarketUpdate(&u);
-  MEMarketUpdate c{MarketUpdateType::CANCEL, 1, 0, common::Side::BUY,
-                   100, 0, 1};
+  MarketUpdateImpl c{
+      MarketUpdateType::CANCEL, 1, 0, common::Side::BUY, 100, 0, 1};
   book->onMarketUpdate(&c);
   EXPECT_EQ(book->getBBO()->m_bidPrice, common::INVALID_PRICE);
 }
@@ -166,8 +167,13 @@ TEST_F(TradingBookTest, ClearDropsOldOrdersAndRebuilds) {
   auto a = addUpd(2, common::Side::SELL, 101, 5);
   book->onMarketUpdate(&b);
   book->onMarketUpdate(&a);
-  MEMarketUpdate c{MarketUpdateType::CLEAR, 0, 0, common::Side::INVALID,
-                   common::INVALID_PRICE, 0, common::INVALID_PRIORITY};
+  MarketUpdateImpl c{MarketUpdateType::CLEAR,
+                     0,
+                     0,
+                     common::Side::INVALID,
+                     common::INVALID_PRICE,
+                     0,
+                     common::INVALID_PRIORITY};
   book->onMarketUpdate(&c);
   // Rebuild with two bids; the second refreshes BBO to the new level.
   auto n1 = addUpd(3, common::Side::BUY, 99, 7);
@@ -187,9 +193,13 @@ TEST_F(TradingBookTest, TradeDoesNotMutateBook) {
   book->onMarketUpdate(&b1);
   book->onMarketUpdate(&b2);
   ASSERT_EQ(book->getBBO()->m_bidQty, 17u);
-  MEMarketUpdate t{MarketUpdateType::TRADE, common::INVALID_ORDER_ID, 0,
-                   common::Side::BUY, 100, 3,
-                   common::INVALID_PRIORITY};
+  MarketUpdateImpl t{MarketUpdateType::TRADE,
+                     common::INVALID_ORDER_ID,
+                     0,
+                     common::Side::BUY,
+                     100,
+                     3,
+                     common::INVALID_PRIORITY};
   book->onMarketUpdate(&t);
   EXPECT_EQ(book->getBBO()->m_bidQty, 17u);
 }
@@ -218,8 +228,8 @@ TEST_F(TradingBookTest, CancelBestPromotesNextLevel) {
   auto high = addUpd(2, common::Side::BUY, 100, 5);
   book->onMarketUpdate(&low);
   book->onMarketUpdate(&high);
-  MEMarketUpdate c{MarketUpdateType::CANCEL, 2, 0, common::Side::BUY,
-                   100, 0, 2};
+  MarketUpdateImpl c{
+      MarketUpdateType::CANCEL, 2, 0, common::Side::BUY, 100, 0, 2};
   book->onMarketUpdate(&c);
   EXPECT_EQ(book->getBBO()->m_bidPrice, 99u);
 }
