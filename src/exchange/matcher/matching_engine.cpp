@@ -35,9 +35,10 @@ MatchingEngine::~MatchingEngine() noexcept {
 void MatchingEngine::start() {
   m_running.store(true, std::memory_order_relaxed);
 
-  ASSERT(common::createAndStartThread(-1, "MatchingEngine",
-                                      [this]() { run(); }) != nullptr,
-         "Failed to start MatchingEngine thread.");
+  auto thread = common::createAndStartThread(-1, "MatchingEngine",
+                                                  [this]() { run(); });
+  ASSERT(thread != nullptr, "Failed to start MatchingEngine thread.");
+  thread->detach();
 }
 
 void MatchingEngine::stop() {

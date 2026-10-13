@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <memory>
 #include <thread>
 #include <unistd.h>
 
@@ -20,8 +21,9 @@ inline auto setThreadCore(int core_id) noexcept {
 
 template <typename T, typename... A>
 inline auto createAndStartThread(int core_id, const std::string &name, T &&func,
-                                 A &&...args) noexcept {
-  auto t = new std::thread([&]() {
+                                 A &&...args) noexcept
+    -> std::unique_ptr<std::thread> {
+  auto t = std::make_unique<std::thread>([&]() {
     if (core_id >= 0 && !setThreadCore(core_id)) {
       std::cerr << "Failed to set core affinity for " << name << " "
                 << pthread_self() << " to " << core_id << std::endl;

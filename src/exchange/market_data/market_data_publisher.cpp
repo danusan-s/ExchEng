@@ -34,9 +34,10 @@ void MarketDataPublisher::start() {
   m_running.store(true, std::memory_order_relaxed);
   m_snapshotSynthesizer->start();
 
-  ASSERT(common::createAndStartThread(-1, "MarketDataPublisher",
-                                      [this]() { run(); }) != nullptr,
-         "Failed to start MarketDataPublisher thread.");
+  auto thread = common::createAndStartThread(-1, "MarketDataPublisher",
+                                                  [this]() { run(); });
+  ASSERT(thread != nullptr, "Failed to start MarketDataPublisher thread.");
+  thread->detach();
 }
 
 void MarketDataPublisher::stop() {

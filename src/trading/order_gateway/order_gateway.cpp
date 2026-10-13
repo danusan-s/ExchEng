@@ -29,9 +29,10 @@ void OrderGateway::start() {
          "Failed to connect to" + m_ip + ":" + std::to_string(m_port) +
              " on interface " + m_iface + " error: " + std::strerror(errno));
 
-  ASSERT(common::createAndStartThread(-1, "Trading/OrderGateway",
-                                      [this]() { run(); }) != nullptr,
-         "Failed to create order gateway thread");
+  auto thread = common::createAndStartThread(-1, "Trading/OrderGateway",
+                                                  [this]() { run(); });
+  ASSERT(thread != nullptr, "Failed to create order gateway thread");
+  thread->detach();
 }
 
 void OrderGateway::stop() {

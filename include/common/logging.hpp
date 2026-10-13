@@ -253,7 +253,7 @@ private:
 
   LFQueue<LogElement> m_queue;
   std::atomic<bool> m_running = {true};
-  std::thread *m_loggerThread = nullptr;
+  std::unique_ptr<std::thread> m_loggerThread = nullptr;
 };
 
 } // namespace common

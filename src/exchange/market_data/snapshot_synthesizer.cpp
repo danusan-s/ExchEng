@@ -26,9 +26,10 @@ SnapshotSynthesizer::~SnapshotSynthesizer() noexcept {
 
 void SnapshotSynthesizer::start() {
   m_running.store(true, std::memory_order_relaxed);
-  ASSERT(common::createAndStartThread(-1, "SnapshotSynthesizer",
-                                      [this]() { run(); }) != nullptr,
-         "Failed to start SnapshotSynthesizer thread.");
+  auto thread = common::createAndStartThread(-1, "SnapshotSynthesizer",
+                                                  [this]() { run(); });
+  ASSERT(thread != nullptr, "Failed to start SnapshotSynthesizer thread.");
+  thread->detach();
 }
 
 void SnapshotSynthesizer::stop() {

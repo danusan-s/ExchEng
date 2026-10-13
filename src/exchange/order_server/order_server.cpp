@@ -32,9 +32,10 @@ void OrderServer::start() {
   m_running.store(true, std::memory_order_relaxed);
   m_tcpServer.listen(m_iface, m_port);
 
-  ASSERT(common::createAndStartThread(-1, "OrderServer", [this]() { run(); }) !=
-             nullptr,
-         "Failed to start OrderServer thread.");
+  auto thread =
+      common::createAndStartThread(-1, "OrderServer", [this]() { run(); });
+  ASSERT(thread != nullptr, "Failed to start OrderServer thread.");
+  thread->detach();
 }
 
 void OrderServer::stop() {
