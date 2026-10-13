@@ -1,5 +1,6 @@
 #include "exchange/order_server/order_server.hpp"
 #include "common/macros.hpp"
+#include "common/perf_utils.hpp"
 #include "exchange/order_server/client_request.hpp"
 
 namespace exchange {
@@ -53,8 +54,8 @@ void OrderServer::run() noexcept {
     for (auto clientResponse = m_clientResponseQueue->getNextToRead();
          clientResponse != nullptr;
          clientResponse = m_clientResponseQueue->getNextToRead()) {
-      auto &nextOutSeqNum =
-          m_cidNextOutSeqNum.at(clientResponse->m_clientId);
+      auto &nextOutSeqNum = m_cidNextOutSeqNum.at(clientResponse->m_clientId);
+      TTT_MEASURE(T5t_OrderServer_LFQueue_read, m_logger);
 
       m_logger.logData("%:% %() Sending response to ClientId: % seqNum: % %\n",
                        __FILE__, __LINE__, __FUNCTION__,
@@ -62,15 +63,18 @@ void OrderServer::run() noexcept {
                        clientResponse->toString().c_str());
 
       auto socket = m_cidSockets.at(clientResponse->m_clientId);
-
       ASSERT(socket != nullptr, "No socket found for ClientId: " +
                                     std::to_string(clientResponse->m_clientId));
 
+      START_MEASURE(Exchange_OrderServer_send);
       socket->send(&nextOutSeqNum, sizeof(nextOutSeqNum));
       socket->send(clientResponse, sizeof(ClientResponseImpl));
+      END_MEASURE(Exchange_OrderServer_send, m_logger);
 
       ++nextOutSeqNum;
       m_clientResponseQueue->updateReadIndex();
+
+      TTT_MEASURE(T6t_OrderServer_TCP_write, m_logger);
     }
   }
 
@@ -81,6 +85,8 @@ void OrderServer::run() noexcept {
 void OrderServer::recvCallback(TCPSocket *socket, Nanos rxTime) noexcept {
   m_logger.logInfo("%:% %() Received data from socket % at time %\n", __FILE__,
                    __LINE__, __FUNCTION__, socket->m_socketFd, rxTime);
+
+  TTT_MEASURE(T1_OrderServer_TCP_read, m_logger);
 
   if (socket->m_nextReceiveValidIndex > sizeof(ClientRequest)) {
     size_t i = 0;
@@ -94,7 +100,8 @@ void OrderServer::recvCallback(TCPSocket *socket, Nanos rxTime) noexcept {
                        request->toString());
 
       // First request from client
-      if (m_cidSockets.at(request->m_request.m_clientId) == nullptr) [[unlikely]] {
+      if (m_cidSockets.at(request->m_request.m_clientId) == nullptr)
+          [[unlikely]] {
         m_cidSockets.at(request->m_request.m_clientId) = socket;
       }
       // Mismatch in client socket
@@ -110,8 +117,7 @@ void OrderServer::recvCallback(TCPSocket *socket, Nanos rxTime) noexcept {
 
       // TODO: REJECT_BACK for mismatched seqNum, so client can retry
       // Check for sequence number mismatch
-      auto &nextInSeqNum =
-          m_cidNextInSeqNum.at(request->m_request.m_clientId);
+      auto &nextInSeqNum = m_cidNextInSeqNum.at(request->m_request.m_clientId);
       if (request->m_seqNum != nextInSeqNum) {
         m_logger.logError("%:% %() Received request from ClientId: % with "
                           "seqNum: % expected seqNum: %\n",
@@ -121,7 +127,10 @@ void OrderServer::recvCallback(TCPSocket *socket, Nanos rxTime) noexcept {
         continue;
       }
       ++nextInSeqNum;
+
+      START_MEASURE(Exchange_OrderServer_FIFO_addClientRequest);
       m_fifoSequencer.addClientRequest(rxTime, request->m_request);
+      END_MEASURE(Exchange_OrderServer_FIFO_addClientRequest, m_logger);
     }
     memcpy(socket->m_inboundData.data(), socket->m_inboundData.data() + i,
            socket->m_nextReceiveValidIndex - i);
@@ -130,9 +139,11 @@ void OrderServer::recvCallback(TCPSocket *socket, Nanos rxTime) noexcept {
 }
 
 void OrderServer::recvFinishedCallback() noexcept {
+  START_MEASURE(Exchange_OrderServer_FIFO_sequenceAndPublish);
   m_logger.logInfo("%:% %() Finished processing received data\n", __FILE__,
                    __LINE__, __FUNCTION__);
   m_fifoSequencer.sequenceAndPublish();
+  END_MEASURE(Exchange_OrderServer_FIFO_sequenceAndPublish, m_logger);
 }
 
 } // namespace exchange

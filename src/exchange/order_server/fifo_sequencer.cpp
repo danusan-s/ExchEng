@@ -1,4 +1,5 @@
 #include "exchange/order_server/fifo_sequencer.hpp"
+#include "common/perf_utils.hpp"
 
 namespace exchange {
 
@@ -29,6 +30,7 @@ void FIFOSequencer::sequenceAndPublish() noexcept {
     auto *nextToWrite = m_clientRequestQueue->getNextToWriteTo();
     *nextToWrite = req.m_clientRequest;
     m_clientRequestQueue->updateWriteIndex();
+    TTT_MEASURE(T2_OrderServer_LFQueue_write, (*m_logger));
   }
 
   m_pendingSize = 0;

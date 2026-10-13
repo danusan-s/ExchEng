@@ -89,6 +89,13 @@ public:
     log(s, args...);
   }
 
+  template <typename... A> void logDebug(const char *s, A... args) noexcept {
+    common::getCurrentTimeStr(&m_timeStr);
+    pushValue(m_timeStr);
+    pushValue("\033[34m[DEBUG]\033[0m ");
+    log(s, args...);
+  }
+
   template <typename... A> void logWarn(const char *s, A... args) noexcept {
     common::getCurrentTimeStr(&m_timeStr);
     pushValue(m_timeStr);

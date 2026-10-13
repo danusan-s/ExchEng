@@ -1,5 +1,6 @@
 #include "exchange/market_data/market_data_publisher.hpp"
 #include "common/constants.hpp"
+#include "common/perf_utils.hpp"
 #include <cstring>
 
 namespace exchange {
@@ -34,7 +35,7 @@ void MarketDataPublisher::start() {
   m_snapshotSynthesizer->start();
 
   auto thread = common::createAndStartThread(-1, "MarketDataPublisher",
-                                                  [this]() { run(); });
+                                             [this]() { run(); });
   ASSERT(thread != nullptr, "Failed to start MarketDataPublisher thread.");
   thread->detach();
 }
@@ -52,12 +53,21 @@ void MarketDataPublisher::run() noexcept {
     for (auto marketUpdate = m_outgoingUpdateQueue->getNextToRead();
          m_outgoingUpdateQueue->size() && marketUpdate;
          marketUpdate = m_outgoingUpdateQueue->getNextToRead()) {
+
+      TTT_MEASURE(T5_MarketDataPublisher_LFQueue_read, m_logger);
+
       m_logger.logData("%:% %() Publishing market update seq: % %\n", __FILE__,
                        __LINE__, __FUNCTION__, m_nextOutSeqNum,
                        marketUpdate->toString());
+
+      START_MEASURE(Exchange_MarketDataPublisher_send);
       m_incrementalUpdateSocket.send(&m_nextOutSeqNum, sizeof(m_nextOutSeqNum));
       m_incrementalUpdateSocket.send(marketUpdate, sizeof(MarketUpdateImpl));
+      END_MEASURE(Exchange_MarketDataPublisher_send, m_logger);
+
       m_outgoingUpdateQueue->updateReadIndex();
+
+      TTT_MEASURE(T6_MarketDataPublisher_UDP_write, m_logger);
 
       auto nextSnapshotWrite = m_snapshotUpdateQueue.getNextToWriteTo();
       nextSnapshotWrite->m_seqNum = m_nextOutSeqNum;

@@ -1,4 +1,6 @@
 #include "exchange/matcher/matching_engine.hpp"
+
+#include "common/perf_utils.hpp"
 #include "exchange/order_server/client_request.hpp"
 
 namespace exchange {
@@ -11,8 +13,8 @@ MatchingEngine::MatchingEngine(
       m_clientResponseQueue(clientResponseQueue),
       m_marketUpdateQueue(marketUpdateQueue), m_logger("matching_engine.log") {
   for (size_t i = 0; i < m_tickerOrderBooks.size(); ++i) {
-    m_tickerOrderBooks.at(i) =
-        std::make_unique<MEOrderBook>(static_cast<TickerId>(i), &m_logger, this);
+    m_tickerOrderBooks.at(i) = std::make_unique<MEOrderBook>(
+        static_cast<TickerId>(i), &m_logger, this);
   }
 }
 
@@ -34,8 +36,8 @@ MatchingEngine::~MatchingEngine() noexcept {
 void MatchingEngine::start() {
   m_running.store(true, std::memory_order_relaxed);
 
-  auto thread = common::createAndStartThread(-1, "MatchingEngine",
-                                                  [this]() { run(); });
+  auto thread =
+      common::createAndStartThread(-1, "MatchingEngine", [this]() { run(); });
   ASSERT(thread != nullptr, "Failed to start MatchingEngine thread.");
   thread->detach();
 }
@@ -51,9 +53,15 @@ void MatchingEngine::run() noexcept {
   while (m_running.load(std::memory_order_relaxed)) {
     const auto meClientRequest = m_clientRequestQueue->getNextToRead();
     if (meClientRequest) [[likely]] {
+      TTT_MEASURE(T3_MatchingEngine_LFQueue_read, m_logger);
+
       m_logger.logData("%:% %() Processing %\n", __FILE__, __LINE__,
                        __FUNCTION__, meClientRequest->toString());
+
+      START_MEASURE(Exchange_MatchingEngine_processClientRequest);
       processClientRequest(meClientRequest);
+      END_MEASURE(Exchange_MatchingEngine_processClientRequest, m_logger);
+
       m_clientRequestQueue->updateReadIndex();
     }
   }
@@ -64,18 +72,20 @@ void MatchingEngine::run() noexcept {
 
 void MatchingEngine::processClientRequest(
     const ClientRequestImpl *meClientRequest) noexcept {
-  auto *orderBook =
-      m_tickerOrderBooks.at(meClientRequest->m_tickerId).get();
+  auto *orderBook = m_tickerOrderBooks.at(meClientRequest->m_tickerId).get();
   switch (meClientRequest->m_type) {
     case exchange::ClientRequestType::NEW: {
+      START_MEASURE(Exchange_MEOrderBook_add);
       orderBook->add(meClientRequest->m_clientId, meClientRequest->m_orderId,
                      meClientRequest->m_tickerId, meClientRequest->m_side,
                      meClientRequest->m_price, meClientRequest->m_quantity);
-
+      END_MEASURE(Exchange_MEOrderBook_add, m_logger);
     } break;
     case exchange::ClientRequestType::CANCEL: {
+      START_MEASURE(Exchange_MEOrderBook_cancel);
       orderBook->cancel(meClientRequest->m_clientId, meClientRequest->m_orderId,
                         meClientRequest->m_tickerId);
+      END_MEASURE(Exchange_MEOrderBook_cancel, m_logger);
     } break;
     default:
       m_logger.logError("%:% %() Unknown request type: %\n", __FILE__, __LINE__,
@@ -92,6 +102,8 @@ void MatchingEngine::sendClientResponse(
   auto nextWriteIndex = m_clientResponseQueue->getNextToWriteTo();
   *nextWriteIndex = std::move(*meClientResponse);
   m_clientResponseQueue->updateWriteIndex();
+
+  TTT_MEASURE(T4t_MatchingEngine_LFQueue_write, m_logger);
 }
 
 void MatchingEngine::sendMarketUpdate(
@@ -101,6 +113,7 @@ void MatchingEngine::sendMarketUpdate(
   auto nextWriteIndex = m_marketUpdateQueue->getNextToWriteTo();
   *nextWriteIndex = std::move(*meMarketUpdate);
   m_marketUpdateQueue->updateWriteIndex();
+  TTT_MEASURE(T4_MatchingEngine_LFQueue_write, m_logger);
 }
 
 }; // namespace exchange

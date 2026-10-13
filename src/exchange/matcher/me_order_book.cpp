@@ -1,5 +1,6 @@
 #include "exchange/matcher/me_order_book.hpp"
 #include "common/constants.hpp"
+#include "common/perf_utils.hpp"
 #include "common/types.hpp"
 #include "exchange/market_data/market_update.hpp"
 #include "exchange/matcher/matching_engine.hpp"
@@ -34,8 +35,8 @@ MEOrderBook::MEOrderBook(TickerId ticker_id, Logger *logger,
 }
 
 MEOrderBook::~MEOrderBook() {
-  m_logger->logInfo("%:% %() Destroying order book for tickerId=%\n",
-                    __FILE__, __LINE__, __FUNCTION__, m_tickerId);
+  m_logger->logInfo("%:% %() Destroying order book for tickerId=%\n", __FILE__,
+                    __LINE__, __FUNCTION__, m_tickerId);
   m_matchingEngine = nullptr;
   m_bidsByPrice = nullptr;
   m_asksByPrice = nullptr;
@@ -61,15 +62,21 @@ void MEOrderBook::add(ClientId clientId, OrderId clientOrderId,
 
   m_matchingEngine->sendClientResponse(&m_clientResponse);
 
+  START_MEASURE(Exchange_MEOrderBook_checkForMatch);
   const auto leavesQty = checkForMatch(clientId, clientOrderId, tickerId, side,
                                        price, qty, marketOrderId);
+  END_MEASURE(Exchange_MEOrderBook_checkForMatch, (*m_logger));
 
   if (leavesQty) [[likely]] {
     const auto priority = getNextPriority(price);
     auto newOrder = m_ordersPool.allocate(tickerId, clientId, clientOrderId,
                                           marketOrderId, side, price, leavesQty,
                                           priority, nullptr, nullptr);
+
+    START_MEASURE(Exchange_MEOrderBook_addOrderToBook);
     addOrderToBook(newOrder);
+    END_MEASURE(Exchange_MEOrderBook_addOrderToBook, (*m_logger));
+
     m_marketUpdate = {MarketUpdateType::ADD,
                       marketOrderId,
                       tickerId,
@@ -190,7 +197,11 @@ void MEOrderBook::cancel(ClientId clientId, OrderId orderId,
                       order->m_price,
                       0,
                       order->m_priority};
+
+    START_MEASURE(Exchange_MEOrderBook_removeOrderFromBook);
     removeOrderFromBook(order);
+    END_MEASURE(Exchange_MEOrderBook_removeOrderFromBook, (*m_logger));
+
     m_matchingEngine->sendMarketUpdate(&m_marketUpdate);
   }
   m_matchingEngine->sendClientResponse(&m_clientResponse);
@@ -252,8 +263,10 @@ Quantity MEOrderBook::checkForMatch(ClientId clientId, OrderId clientOrderId,
         break;
       }
 
+      START_MEASURE(Exchange_MEOrderBook_match);
       match(tickerId, clientId, side, clientOrderId, marketOrderId, askOrders,
             &leavesQty);
+      END_MEASURE(Exchange_MEOrderBook_match, (*m_logger));
     }
   } else if (side == Side::SELL) {
     while (leavesQty && m_bidsByPrice) {
@@ -262,8 +275,10 @@ Quantity MEOrderBook::checkForMatch(ClientId clientId, OrderId clientOrderId,
         break;
       }
 
+      START_MEASURE(Exchange_MEOrderBook_match);
       match(tickerId, clientId, side, clientOrderId, marketOrderId, bidOrders,
             &leavesQty);
+      END_MEASURE(Exchange_MEOrderBook_match, (*m_logger));
     }
   }
   return leavesQty;
@@ -314,7 +329,10 @@ void MEOrderBook::match(TickerId tickerId, ClientId clientId, Side side,
                       INVALID_PRIORITY};
     m_matchingEngine->sendMarketUpdate(&m_marketUpdate);
 
+    START_MEASURE(Exchange_MEOrderBook_removeOrderFromBook);
     removeOrderFromBook(order);
+    END_MEASURE(Exchange_MEOrderBook_removeOrderFromBook, (*m_logger));
+
     return;
   }
 
