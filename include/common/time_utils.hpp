@@ -1,8 +1,8 @@
 #pragma once
 
 #include <chrono>
-#include <ctime>
-#include <iomanip>
+#include <cstdio>
+#include <string>
 
 namespace common {
 
@@ -14,27 +14,37 @@ constexpr Nanos MILLIS_TO_SECS = 1000;
 constexpr Nanos NANOS_TO_MILLIS = NANOS_TO_MICROS * MICROS_TO_MILLIS;
 constexpr Nanos NANOS_TO_SECS = NANOS_TO_MILLIS * MILLIS_TO_SECS;
 
-inline auto getCurrentNanos() noexcept {
+inline Nanos getCurrentNanos() noexcept {
   return std::chrono::duration_cast<std::chrono::nanoseconds>(
              std::chrono::system_clock::now().time_since_epoch())
       .count();
 }
 
-inline auto &getCurrentTimeStr(std::string *time_str) {
+inline std::string &formatTimestamp(int64_t ns, std::string &buf) {
+  using namespace std::chrono;
 
-  std::ostringstream oss;
-  auto now = std::chrono::system_clock::now();
-  const auto time = std::chrono::system_clock::to_time_t(now);
+  const auto tp = sys_time<nanoseconds>{nanoseconds{ns}};
+  const auto day = floor<days>(tp);
+  const year_month_day ymd{day};
+  const hh_mm_ss time{tp - day};
 
-  auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                now.time_since_epoch()) %
-            1000;
+  const auto ms = duration_cast<milliseconds>(time.subseconds()).count();
 
-  oss << "[" << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S") << '.'
-      << std::setfill('0') << std::setw(3) << ms.count() << "] ";
-  time_str->assign(oss.str());
+  buf.resize(25); // '[YYYY-MM-DD HH:MM:SS.mmm]' = 25 characters
 
-  return *time_str;
+  std::snprintf(buf.data(), buf.size() + 1,
+                "[%04d-%02u-%02u %02lld:%02lld:%02lld.%03lld]", int(ymd.year()),
+                unsigned(ymd.month()), unsigned(ymd.day()),
+                static_cast<long long>(time.hours().count()),
+                static_cast<long long>(time.minutes().count()),
+                static_cast<long long>(time.seconds().count()),
+                static_cast<long long>(ms));
+
+  return buf;
+}
+
+inline std::string &getCurrentTimeStr(std::string &buf) {
+  return formatTimestamp(getCurrentNanos(), buf);
 }
 
 } // namespace common

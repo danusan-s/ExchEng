@@ -14,15 +14,16 @@ namespace common {
 inline constexpr size_t LOG_QUEUE_SIZE = 8 * 1024 * 1024;
 
 enum class LogType : int8_t {
-  CHAR = 0,
-  INTEGER = 1,
-  LONG_INTEGER = 2,
-  LONG_LONG_INTEGER = 3,
-  UNSIGNED_INTEGER = 4,
-  UNSIGNED_LONG_INTEGER = 5,
-  UNSIGNED_LONG_LONG_INTEGER = 6,
-  FLOAT = 7,
-  DOUBLE = 8
+  TIMESTAMP = 0,
+  CHAR = 1,
+  INTEGER = 2,
+  LONG_INTEGER = 3,
+  LONG_LONG_INTEGER = 4,
+  UNSIGNED_INTEGER = 5,
+  UNSIGNED_LONG_INTEGER = 6,
+  UNSIGNED_LONG_LONG_INTEGER = 7,
+  FLOAT = 8,
+  DOUBLE = 9
 };
 
 // TODO: a single char doesn't take advantage of the sizing of the union.
@@ -31,6 +32,7 @@ enum class LogType : int8_t {
 struct LogElement {
   LogType type_ = LogType::CHAR;
   union {
+    Nanos t;
     char c;
     int i;
     long l;
@@ -60,7 +62,7 @@ public:
 
   ~Logger() {
     std::string time_str;
-    std::cerr << common::getCurrentTimeStr(&time_str)
+    std::cerr << common::getCurrentTimeStr(time_str)
               << " Flushing and closing Logger for " << m_fileName << std::endl;
 
     while (m_queue.size()) {
@@ -71,42 +73,37 @@ public:
     m_loggerThread->join();
 
     m_file.close();
-    std::cerr << common::getCurrentTimeStr(&time_str) << " Logger for "
+    std::cerr << common::getCurrentTimeStr(time_str) << " Logger for "
               << m_fileName << " exiting." << std::endl;
   }
 
   template <typename... A> void logData(const char *s, A... args) noexcept {
-    common::getCurrentTimeStr(&m_timeStr);
-    pushValue(m_timeStr);
-    pushValue("\033[36m[DATA]\033[0m ");
+    pushTimestamp(common::getCurrentNanos());
+    pushValue(" \033[36m[DATA]\033[0m ");
     log(s, args...);
   }
 
   template <typename... A> void logInfo(const char *s, A... args) noexcept {
-    common::getCurrentTimeStr(&m_timeStr);
-    pushValue(m_timeStr);
-    pushValue("\033[32m[INFO]\033[0m ");
+    pushTimestamp(common::getCurrentNanos());
+    pushValue(" \033[32m[INFO]\033[0m ");
     log(s, args...);
   }
 
   template <typename... A> void logDebug(const char *s, A... args) noexcept {
-    common::getCurrentTimeStr(&m_timeStr);
-    pushValue(m_timeStr);
-    pushValue("\033[90m[DEBUG]\033[0m ");
+    pushTimestamp(common::getCurrentNanos());
+    pushValue(" \033[90m[DEBUG]\033[0m ");
     log(s, args...);
   }
 
   template <typename... A> void logWarn(const char *s, A... args) noexcept {
-    common::getCurrentTimeStr(&m_timeStr);
-    pushValue(m_timeStr);
-    pushValue("\033[33m[WARNING]\033[0m ");
+    pushTimestamp(common::getCurrentNanos());
+    pushValue(" \033[33m[WARNING]\033[0m ");
     log(s, args...);
   }
 
   template <typename... A> void logError(const char *s, A... args) noexcept {
-    common::getCurrentTimeStr(&m_timeStr);
-    pushValue(m_timeStr);
-    pushValue("\033[31m[ERROR]\033[0m ");
+    pushTimestamp(common::getCurrentNanos());
+    pushValue(" \033[31m[ERROR]\033[0m ");
     log(s, args...);
   }
 
@@ -124,6 +121,9 @@ private:
            next = m_queue.getNextToRead()) {
         written = true;
         switch (next->type_) {
+          case LogType::TIMESTAMP:
+            m_file << common::formatTimestamp(next->u_.t, m_timeStr);
+            break;
           case LogType::CHAR:
             m_file << next->u_.c;
             break;
@@ -166,6 +166,10 @@ private:
   void pushValue(const LogElement &log_element) noexcept {
     *(m_queue.getNextToWriteTo()) = log_element;
     m_queue.updateWriteIndex();
+  }
+
+  void pushTimestamp(const Nanos value) noexcept {
+    pushValue(LogElement{LogType::TIMESTAMP, {.t = value}});
   }
 
   void pushValue(const char value) noexcept {
