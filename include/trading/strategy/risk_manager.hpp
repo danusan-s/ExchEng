@@ -71,6 +71,12 @@ public:
   RiskManager(const PositionKeeper *positionKeeper,
               const TradeEngineConfigMap &tickerConfigMap, Logger *logger);
 
+  RiskManager() = delete;
+  RiskManager(const RiskManager &) = delete;
+  RiskManager(RiskManager &&) = delete;
+  RiskManager &operator=(const RiskManager &) = delete;
+  RiskManager &operator=(RiskManager &&) = delete;
+
   RiskCheckResult checkPreTradeRisk(TickerId tickerId, Side side,
                                     Quantity qty) const noexcept;
 

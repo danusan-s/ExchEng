@@ -16,6 +16,12 @@ public:
   OrderManager(TradeEngine *tradeEngine, const RiskManager &riskManager,
                common::Logger *logger);
 
+  OrderManager() = delete;
+  OrderManager(const OrderManager &) = delete;
+  OrderManager(OrderManager &&) = delete;
+  OrderManager &operator=(const OrderManager &) = delete;
+  OrderManager &operator=(OrderManager &&) = delete;
+
   const OMOrderSideMap &getOMOrderSideMap(TickerId tickerId) const;
 
   void newOrder(OMOrder *order, TickerId tickerId, Side side, Price price,

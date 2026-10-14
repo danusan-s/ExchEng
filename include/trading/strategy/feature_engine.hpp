@@ -15,6 +15,12 @@ public:
   FeatureEngine(Logger *logger) : m_logger(logger) {
   }
 
+  FeatureEngine() = delete;
+  FeatureEngine(const FeatureEngine &) = delete;
+  FeatureEngine(FeatureEngine &&) = delete;
+  FeatureEngine &operator=(const FeatureEngine &) = delete;
+  FeatureEngine &operator=(FeatureEngine &&) = delete;
+
   double getMarketPrice() const noexcept {
     return m_marketPrice;
   }

@@ -11,6 +11,12 @@ struct TCPServer {
 
   ~TCPServer();
 
+  TCPServer() = delete;
+  TCPServer(const TCPServer &) = delete;
+  TCPServer(TCPServer &&) = delete;
+  TCPServer &operator=(const TCPServer &) = delete;
+  TCPServer &operator=(TCPServer &&) = delete;
+
   /// Start listening for connections on the provided interface and port.
   auto listen(const std::string &iface, int port) -> void;
 

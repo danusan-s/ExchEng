@@ -32,6 +32,12 @@ struct MulticastSocket {
   /// Copy data to send buffers - does not send them out yet.
   auto send(const void *data, size_t len) noexcept -> void;
 
+  MulticastSocket() = delete;
+  MulticastSocket(const MulticastSocket &) = delete;
+  MulticastSocket(MulticastSocket &&) = delete;
+  MulticastSocket &operator=(const MulticastSocket &) = delete;
+  MulticastSocket &operator=(MulticastSocket &&) = delete;
+
   int m_socketFd = -1;
 
   /// Send and receive buffers, typically only one or the other is needed

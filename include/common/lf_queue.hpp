@@ -44,9 +44,9 @@ public:
 
   LFQueue() = delete;
   LFQueue(const LFQueue &) = delete;
-  LFQueue(const LFQueue &&) = delete;
+  LFQueue(LFQueue &&) = delete;
   LFQueue &operator=(const LFQueue &) = delete;
-  LFQueue &operator=(const LFQueue &&) = delete;
+  LFQueue &operator=(LFQueue &&) = delete;
 
 private:
   std::vector<T> m_store;

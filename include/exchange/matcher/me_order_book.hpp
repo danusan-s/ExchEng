@@ -32,9 +32,9 @@ public:
 
   MEOrderBook() = delete;
   MEOrderBook(const MEOrderBook &) = delete;
-  MEOrderBook(const MEOrderBook &&) = delete;
+  MEOrderBook(MEOrderBook &&) = delete;
   MEOrderBook &operator=(const MEOrderBook &) = delete;
-  MEOrderBook &operator=(const MEOrderBook &&) = delete;
+  MEOrderBook &operator=(MEOrderBook &&) = delete;
 
 private:
   TickerId m_tickerId = INVALID_TICKER_ID;

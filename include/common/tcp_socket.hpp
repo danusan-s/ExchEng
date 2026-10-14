@@ -30,9 +30,9 @@ struct TCPSocket {
 
   TCPSocket() = delete;
   TCPSocket(const TCPSocket &) = delete;
-  TCPSocket(const TCPSocket &&) = delete;
+  TCPSocket(TCPSocket &&) = delete;
   TCPSocket &operator=(const TCPSocket &) = delete;
-  TCPSocket &operator=(const TCPSocket &&) = delete;
+  TCPSocket &operator=(TCPSocket &&) = delete;
 
   /// File descriptor for the socket.
   int m_socketFd = -1;

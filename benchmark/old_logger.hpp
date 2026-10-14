@@ -112,9 +112,9 @@ public:
 
   OldLogger() = delete;
   OldLogger(const OldLogger &) = delete;
-  OldLogger(const OldLogger &&) = delete;
+  OldLogger(OldLogger &&) = delete;
   OldLogger &operator=(const OldLogger &) = delete;
-  OldLogger &operator=(const OldLogger &&) = delete;
+  OldLogger &operator=(OldLogger &&) = delete;
 
 private:
   void flushQueue() noexcept {

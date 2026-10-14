@@ -54,9 +54,9 @@ public:
 
   MemPool() = delete;
   MemPool(const MemPool &) = delete;
-  MemPool(const MemPool &&) = delete;
+  MemPool(MemPool &&) = delete;
   MemPool &operator=(const MemPool &) = delete;
-  MemPool &operator=(const MemPool &&) = delete;
+  MemPool &operator=(MemPool &&) = delete;
 
 private:
   struct ObjectBlock {

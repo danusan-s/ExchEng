@@ -19,13 +19,13 @@ inline constexpr size_t LOG_BUFFERED_STRING_SIZE =
        // old single byte char, higher value waste mem but faster
 
 enum class LogLevel : int8_t {
-  DATA = 0,
-  INFO = 1,
-  DEBUG = 2,
-  WARN = 3,
-  ERROR = 4,
   NONE =
-      5, // Used to indicate no log level, for example when logging a timestamp
+      0, // Used to indicate no log level, for example when logging a timestamp
+  DATA = 1,
+  INFO = 2,
+  DEBUG = 3,
+  WARN = 4,
+  ERROR = 5,
 };
 
 inline const char *getLogLevelString(int i) {
@@ -142,9 +142,9 @@ public:
 
   Logger() = delete;
   Logger(const Logger &) = delete;
-  Logger(const Logger &&) = delete;
+  Logger(Logger &&) = delete;
   Logger &operator=(const Logger &) = delete;
-  Logger &operator=(const Logger &&) = delete;
+  Logger &operator=(Logger &&) = delete;
 
 private:
   void flushQueue() noexcept {
