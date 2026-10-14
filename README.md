@@ -2,30 +2,35 @@
 
 Note: This is currently a work in progress and not complete yet.
 
-A C++ trading exchange engine built while following Saurav Ghosh's *Low Latency Applications in C++*, exploring lock-free programming, concurrency, and low-latency trading systems.
+A C++ limit-order-book exchange engine built while following Saurav Ghosh's *Low Latency Applications in C++*, exploring lock-free programming, concurrency, and low-latency trading systems.
 Goal of this project is to just get my hands dirty with low latency programming while also learning about trading jargon and exchange architecture.
+
+## How it works
+
+Clients send New / Cancel requests over TCP. The exchange sequences them (FIFO), matches them against a per-ticker limit order book, then sends order responses back over TCP and publishes market updates over multicast, with periodic snapshots for recovery.
+
+Low-latency approach: one busy thread per component, single-producer / single-consumer lock-free queues between them, memory pools with no allocation in the hot path, and a dedicated logger thread per component.
 
 ## Components
 
-### Market/Exchange side:
+### Exchange side (single process):
 
-4 threads running:
-- Matching engine : Maintains order book and logic
-- Order server : Maintains client connections, fifo sequencing 
-- Market data publisher : Publishes market updates on multicast socket
-- Snapshot publisher : Accumulates updates and publishes final state on another multicast socket
+3 hot threads, each pinned to its own CPU core and busy-spinning on a lock-free queue:
+- Matching engine (core 2) : Per-ticker limit order books, handles New / Cancel, emits client responses + market updates
+- Order server (core 3) : TCP server (`lo:5000`), validates per-client sequence numbers, FIFO-sequences requests into the matching engine, writes responses back
+- Market data publisher (core 0) : Drains market updates, multicasts incrementals (`239.0.1.1:6001`), forwards a copy for snapshots
 
-Each component thread talks to each other through the lock free queue.
-The queue is single producer thread and single consumer thread friendly.
-Each component also comes with it's own logger (and it's consumer thread).
+Plus 1 background thread (unpinned):
+- Snapshot synthesizer : Rebuilds full book state from updates, publishes periodic snapshots (`239.0.1.2:6002`) framed with `SNAPSHOT_START / CLEAR / ADD / SNAPSHOT_END`
 
-### Client/Trader side:
+Threads talk only through single-producer / single-consumer lock-free queues. Each component also has its own logger + logger thread.
 
-- A client to connect to order gateway
-- Client's own copy of order book rebuilt from updates
-- Strategy to send orders to the exchange
-- Subscribe to market data
-- Recover from snapshot if market data is lost
+### Client/Trader side (one process per client):
+
+3 hot threads, each pinned to its own CPU core:
+- Market data consumer (core 1) : Listens to incremental + snapshot multicast, detects sequence gaps and enters snapshot-recovery mode, forwards updates to the trade engine
+- Order gateway (core 5) : TCP client to the order server, sends sequenced requests, checks sequenced responses
+- Trade engine (core 4) : Keeps a local order book per ticker, runs market-maker / liquidity-taker (or random flow), with feature engine, order manager, risk manager, and position keeper
 
 ### Build and Run
 
@@ -35,26 +40,31 @@ make build
 
 This project is highly memory intensive.
 The constraints are dropped heavily in `include/common/constants.hpp`.
-You may want to increase if you machine has enough memory.
+You may want to increase if your machine has enough memory.
 
 Run the exchange engine:
 ```bash
 make run_exchange
 ```
 
-Run the client script:
+Run the trading clients:
 ```bash
-make run_client
+make run_clients
+```
+
+Or run exchange + clients together:
+```bash
+make run_demo
 ```
 
 ## Future work
-[ ] Implement extensions or improvements marked as TODO in the code.
-[ ] FIX protocol for market data and snapshot publisher.
-[ ] Implement other strategies for the client.
-[ ] Reduce logging and asserts in production build.
-[ ] Explore system setup such as isolcpu, NUMA etc.
-[ ] Explore flexible structures to handle unlikely case of exceeding defined max values.
-[ ] Investigate CRTP and if it is worth it to replace strategy pattern in trade engine.
+- [ ] Implement extensions or improvements marked as TODO in the code.
+- [ ] FIX protocol for market data and snapshot publisher.
+- [ ] Implement other strategies for the client.
+- [ ] Reduce logging and asserts in production build.
+- [ ] Explore system setup such as isolcpu, NUMA etc.
+- [ ] Explore flexible structures to handle unlikely case of exceeding defined max values.
+- [ ] Investigate CRTP and if it is worth it to replace strategy pattern in trade engine.
 
 ## System Specifications (Tested on)
 
