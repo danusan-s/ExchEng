@@ -1,8 +1,9 @@
-#include "trading/strategy/market_order_book.hpp"
+#include "trading/trader/market_order_book.hpp"
+
 #include "common/constants.hpp"
 #include "common/perf_utils.hpp"
-#include "trading/strategy/market_order.hpp"
-#include "trading/strategy/trade_engine.hpp"
+#include "trading/trader/market_order.hpp"
+#include "trading/trader/trade_engine.hpp"
 
 namespace trading {
 

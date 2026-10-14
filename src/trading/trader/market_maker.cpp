@@ -1,9 +1,10 @@
-#include "trading/strategy/market_maker.hpp"
-#include "common/perf_utils.hpp"
-#include "trading/strategy/feature_engine.hpp"
-#include "trading/strategy/trade_engine.hpp"
+#include "trading/trader/market_maker.hpp"
 
 #include <cmath>
+
+#include "common/perf_utils.hpp"
+#include "trading/trader/feature_engine.hpp"
+#include "trading/trader/trade_engine.hpp"
 
 namespace trading {
 

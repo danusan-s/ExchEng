@@ -1,7 +1,8 @@
-#include "trading/strategy/order_manager.hpp"
+#include "trading/trader/order_manager.hpp"
+
 #include "common/perf_utils.hpp"
 #include "common/types.hpp"
-#include "trading/strategy/trade_engine.hpp"
+#include "trading/trader/trade_engine.hpp"
 
 namespace trading {
 

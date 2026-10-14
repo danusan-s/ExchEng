@@ -15,9 +15,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "macros.hpp"
-
-#include "logging.hpp"
+#include "common/logging.hpp"
+#include "common/macros.hpp"
 
 namespace common {
 struct SocketCfg {

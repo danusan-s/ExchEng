@@ -1,9 +1,10 @@
 #pragma once
 
-#include "common/types.hpp"
-#include "trading/strategy/config.hpp"
-#include "trading/strategy/position_keeper.hpp"
 #include <sstream>
+
+#include "common/types.hpp"
+#include "trading/trader/config.hpp"
+#include "trading/trader/position_keeper.hpp"
 
 using namespace common;
 

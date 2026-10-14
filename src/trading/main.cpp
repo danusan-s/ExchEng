@@ -9,8 +9,8 @@
 #include "exchange/market_data/market_update.hpp"
 #include "trading/market_data/market_data_consumer.hpp"
 #include "trading/order_gateway/order_gateway.hpp"
-#include "trading/strategy/config.hpp"
-#include "trading/strategy/trade_engine.hpp"
+#include "trading/trader/config.hpp"
+#include "trading/trader/trade_engine.hpp"
 
 using namespace trading;
 

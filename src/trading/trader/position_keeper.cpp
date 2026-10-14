@@ -1,6 +1,8 @@
-#include "trading/strategy/position_keeper.hpp"
-#include "common/types.hpp"
+#include "trading/trader/position_keeper.hpp"
+
 #include <cstdlib>
+
+#include "common/types.hpp"
 
 namespace trading {
 

@@ -1,10 +1,9 @@
 #include <gtest/gtest.h>
-
 #include <memory>
 
 #include "common/logging.hpp"
-#include "trading/strategy/market_maker.hpp"
-#include "trading/strategy/trade_engine.hpp"
+#include "trading/trader/market_maker.hpp"
+#include "trading/trader/trade_engine.hpp"
 
 using namespace trading;
 using namespace exchange;

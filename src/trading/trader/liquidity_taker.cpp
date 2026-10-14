@@ -1,9 +1,10 @@
-#include "trading/strategy/liquidity_taker.hpp"
-#include "common/perf_utils.hpp"
-#include "common/types.hpp"
-#include "trading/strategy/trade_engine.hpp"
+#include "trading/trader/liquidity_taker.hpp"
 
 #include <cmath>
+
+#include "common/perf_utils.hpp"
+#include "common/types.hpp"
+#include "trading/trader/trade_engine.hpp"
 
 namespace trading {
 

@@ -1,11 +1,10 @@
 #include <chrono>
 #include <gtest/gtest.h>
-
 #include <memory>
 #include <thread>
 
 #include "common/logging.hpp"
-#include "trading/strategy/trade_engine.hpp"
+#include "trading/trader/trade_engine.hpp"
 
 using namespace trading;
 using namespace exchange;

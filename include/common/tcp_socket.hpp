@@ -2,8 +2,8 @@
 
 #include <functional>
 
-#include "logging.hpp"
-#include "socket_utils.hpp"
+#include "common/logging.hpp"
+#include "common/socket_utils.hpp"
 
 namespace common {
 

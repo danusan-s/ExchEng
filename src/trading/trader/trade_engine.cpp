@@ -1,6 +1,7 @@
-#include "trading/strategy/trade_engine.hpp"
+#include "trading/trader/trade_engine.hpp"
+
 #include "common/perf_utils.hpp"
-#include "trading/strategy/config.hpp"
+#include "trading/trader/config.hpp"
 
 namespace trading {
 

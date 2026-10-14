@@ -1,19 +1,20 @@
 #pragma once
 
+#include <functional>
+#include <memory>
+
 #include "common/logging.hpp"
 #include "common/time_utils.hpp"
 #include "common/types.hpp"
 #include "exchange/market_data/market_update.hpp"
 #include "exchange/order_server/client_request.hpp"
-#include "trading/strategy/config.hpp"
-#include "trading/strategy/feature_engine.hpp"
-#include "trading/strategy/liquidity_taker.hpp"
-#include "trading/strategy/market_maker.hpp"
-#include "trading/strategy/market_order_book.hpp"
-#include "trading/strategy/order_manager.hpp"
-#include "trading/strategy/risk_manager.hpp"
-#include <functional>
-#include <memory>
+#include "trading/trader/config.hpp"
+#include "trading/trader/feature_engine.hpp"
+#include "trading/trader/liquidity_taker.hpp"
+#include "trading/trader/market_maker.hpp"
+#include "trading/trader/market_order_book.hpp"
+#include "trading/trader/order_manager.hpp"
+#include "trading/trader/risk_manager.hpp"
 
 namespace trading {
 

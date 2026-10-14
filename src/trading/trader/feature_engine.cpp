@@ -1,4 +1,5 @@
-#include "trading/strategy/feature_engine.hpp"
+#include "trading/trader/feature_engine.hpp"
+
 #include "common/types.hpp"
 
 namespace trading {

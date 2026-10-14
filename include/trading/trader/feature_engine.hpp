@@ -2,7 +2,7 @@
 
 #include "common/logging.hpp"
 #include "common/types.hpp"
-#include "trading/strategy/market_order_book.hpp"
+#include "trading/trader/market_order_book.hpp"
 
 using namespace common;
 

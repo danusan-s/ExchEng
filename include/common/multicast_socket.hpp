@@ -1,8 +1,9 @@
 #pragma once
 
-#include "logging.hpp"
-#include "socket_utils.hpp"
 #include <functional>
+
+#include "common/logging.hpp"
+#include "common/socket_utils.hpp"
 
 namespace common {
 

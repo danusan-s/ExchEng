@@ -1,5 +1,6 @@
-#include "trading/strategy/risk_manager.hpp"
-#include "trading/strategy/position_keeper.hpp"
+#include "trading/trader/risk_manager.hpp"
+
+#include "trading/trader/position_keeper.hpp"
 
 namespace trading {
 

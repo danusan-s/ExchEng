@@ -6,10 +6,10 @@
 #include <fstream>
 #include <string>
 
-#include "lf_queue.hpp"
-#include "macros.hpp"
-#include "thread_utils.hpp"
-#include "time_utils.hpp"
+#include "common/lf_queue.hpp"
+#include "common/macros.hpp"
+#include "common/thread_utils.hpp"
+#include "common/time_utils.hpp"
 
 namespace common {
 

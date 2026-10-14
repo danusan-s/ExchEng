@@ -1,13 +1,12 @@
 #include <cmath>
 #include <gtest/gtest.h>
-
 #include <memory>
 #include <vector>
 
 #include "common/logging.hpp"
-#include "trading/strategy/feature_engine.hpp"
-#include "trading/strategy/market_order_book.hpp"
-#include "trading/strategy/trade_engine.hpp"
+#include "trading/trader/feature_engine.hpp"
+#include "trading/trader/market_order_book.hpp"
+#include "trading/trader/trade_engine.hpp"
 
 using namespace trading;
 using namespace exchange;

@@ -18,7 +18,7 @@ file(GLOB EXCHANGE_SOURCES CONFIGURE_DEPENDS
   ${CMAKE_SOURCE_DIR}/src/exchange/order_server/*.cpp
 )
 file(GLOB TRADING_SOURCES CONFIGURE_DEPENDS
-  ${CMAKE_SOURCE_DIR}/src/trading/strategy/*.cpp
+  ${CMAKE_SOURCE_DIR}/src/trading/trader/*.cpp
   ${CMAKE_SOURCE_DIR}/src/trading/market_data/*.cpp
   ${CMAKE_SOURCE_DIR}/src/trading/order_gateway/*.cpp
 )

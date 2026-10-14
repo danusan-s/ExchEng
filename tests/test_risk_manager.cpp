@@ -1,10 +1,9 @@
 #include <gtest/gtest.h>
-
 #include <memory>
 
 #include "common/logging.hpp"
-#include "trading/strategy/position_keeper.hpp"
-#include "trading/strategy/risk_manager.hpp"
+#include "trading/trader/position_keeper.hpp"
+#include "trading/trader/risk_manager.hpp"
 
 using namespace trading;
 using namespace exchange;

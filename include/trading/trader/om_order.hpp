@@ -1,9 +1,9 @@
 #pragma once
 
+#include <sstream>
+
 #include "common/constants.hpp"
 #include "common/types.hpp"
-
-#include <sstream>
 
 using namespace common;
 

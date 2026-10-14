@@ -1,10 +1,11 @@
 #pragma once
 
+#include <array>
+
 #include "common/logging.hpp"
 #include "common/types.hpp"
 #include "exchange/order_server/client_response.hpp"
-#include "trading/strategy/market_order_book.hpp"
-#include <array>
+#include "trading/trader/market_order_book.hpp"
 
 using namespace common;
 

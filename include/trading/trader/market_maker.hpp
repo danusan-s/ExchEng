@@ -1,9 +1,9 @@
 #pragma once
 
 #include "common/logging.hpp"
-#include "trading/strategy/config.hpp"
-#include "trading/strategy/feature_engine.hpp"
-#include "trading/strategy/order_manager.hpp"
+#include "trading/trader/config.hpp"
+#include "trading/trader/feature_engine.hpp"
+#include "trading/trader/order_manager.hpp"
 
 using namespace common;
 

@@ -1,14 +1,13 @@
 #pragma once
 
+#include <memory>
+
 #include "common/logging.hpp"
 #include "common/mem_pool.hpp"
 #include "common/types.hpp"
 #include "exchange/market_data/market_update.hpp"
+#include "exchange/matcher/me_order.hpp"
 #include "exchange/order_server/client_response.hpp"
-
-#include "me_order.hpp"
-
-#include <memory>
 
 using namespace common;
 

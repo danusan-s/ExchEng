@@ -1,12 +1,12 @@
 #pragma once
 
-#include "client_request.hpp"
-#include "client_response.hpp"
 #include "common/constants.hpp"
 #include "common/logging.hpp"
 #include "common/tcp_server.hpp"
 #include "common/tcp_socket.hpp"
-#include "fifo_sequencer.hpp"
+#include "exchange/order_server/client_request.hpp"
+#include "exchange/order_server/client_response.hpp"
+#include "exchange/order_server/fifo_sequencer.hpp"
 
 using namespace common;
 
