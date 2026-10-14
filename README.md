@@ -48,13 +48,17 @@ make run_client
 ```
 
 ## Future work
-- Implement extensions or improvements marked as TODO in the code.
-- Reduce logging and asserts in production build.
-- Explore system setup such as isolcpu, NUMA etc.
+[ ] Implement extensions or improvements marked as TODO in the code.
+[ ] FIX protocol for market data and snapshot publisher.
+[ ] Implement other strategies for the client.
+[ ] Reduce logging and asserts in production build.
+[ ] Explore system setup such as isolcpu, NUMA etc.
+[ ] Explore flexible structures to handle unlikely case of exceeding defined max values.
+[ ] Investigate CRTP and if it is worth it to replace strategy pattern in trade engine.
 
-## System Specifications
+## System Specifications (Tested on)
 
-- OS: Cachy Os
+- OS: Cachy OS 7.2.3
 - Compiler : g++ 16.2.1
 - CPU : AMD Ryzen 7 6800H (8 cores, 16 threads, 3.7 GHz max clock)
 - RAM : 16 GB
