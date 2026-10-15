@@ -15,9 +15,9 @@ protected:
   LFQueue<TestElem> q{8};
 };
 
-// Verifies a freshly constructed queue reports size zero.
+// Verifies a freshly constructed queue reads empty.
 TEST_F(LFQueueTest, NewQueueIsEmpty) {
-  EXPECT_EQ(q.size(), 0u);
+  EXPECT_EQ(q.getNextToRead(), nullptr);
 }
 
 // Verifies reading an empty queue returns nullptr.
@@ -25,35 +25,40 @@ TEST_F(LFQueueTest, ReadOnEmptyReturnsNull) {
   EXPECT_EQ(q.getNextToRead(), nullptr);
 }
 
-// Verifies one write increments size to one.
-TEST_F(LFQueueTest, SingleWriteIncreasesSize) {
+// Verifies one write makes the queue readable.
+TEST_F(LFQueueTest, SingleWriteMakesReadable) {
   auto *w = q.getNextToWriteTo();
+  ASSERT_NE(w, nullptr);
   w->value = 42;
   q.updateWriteIndex();
-  EXPECT_EQ(q.size(), 1u);
+  EXPECT_NE(q.getNextToRead(), nullptr);
 }
 
 // Verifies FIFO round-trip preserves the written value.
 TEST_F(LFQueueTest, WriteThenReadReturnsSameValue) {
   auto *w = q.getNextToWriteTo();
+  ASSERT_NE(w, nullptr);
   w->value = 7;
   q.updateWriteIndex();
   EXPECT_EQ(q.getNextToRead()->value, 7);
 }
 
-// Verifies consuming an element decrements size back to zero.
-TEST_F(LFQueueTest, ReadThenSizeDecreases) {
+// Verifies consuming an element makes the queue empty again.
+TEST_F(LFQueueTest, ReadThenEmpties) {
   auto *w = q.getNextToWriteTo();
+  ASSERT_NE(w, nullptr);
   w->value = 1;
   q.updateWriteIndex();
   q.updateReadIndex();
-  EXPECT_EQ(q.size(), 0u);
+  EXPECT_EQ(q.getNextToRead(), nullptr);
 }
 
 // Verifies elements are read back in FIFO order.
 TEST_F(LFQueueTest, FifoOrderPreserved) {
   for (int i = 0; i < 4; ++i) {
-    q.getNextToWriteTo()->value = i;
+    auto *w = q.getNextToWriteTo();
+    ASSERT_NE(w, nullptr);
+    w->value = i;
     q.updateWriteIndex();
   }
   for (int i = 0; i < 4; ++i) {
@@ -63,32 +68,39 @@ TEST_F(LFQueueTest, FifoOrderPreserved) {
   }
 }
 
-// Verifies queue can fill to capacity and drain fully.
+// Verifies a full queue returns nullptr for writes and drains fully.
+// Usable capacity is numElems - 1 (one slot distinguishes full vs empty).
 TEST_F(LFQueueTest, FillToCapacityThenDrain) {
-  for (int i = 0; i < 8; ++i) {
-    q.getNextToWriteTo()->value = i;
+  for (int i = 0; i < 7; ++i) {
+    auto *w = q.getNextToWriteTo();
+    ASSERT_NE(w, nullptr);
+    w->value = i;
     q.updateWriteIndex();
   }
-  EXPECT_EQ(q.size(), 8u);
-  for (int i = 0; i < 8; ++i) {
+  EXPECT_EQ(q.getNextToWriteTo(), nullptr);
+  for (int i = 0; i < 7; ++i) {
     ASSERT_NE(q.getNextToRead(), nullptr);
     EXPECT_EQ(q.getNextToRead()->value, i);
     q.updateReadIndex();
   }
-  EXPECT_EQ(q.size(), 0u);
+  EXPECT_EQ(q.getNextToRead(), nullptr);
 }
 
 // Verifies ring-buffer wrap-around keeps FIFO order.
 TEST_F(LFQueueTest, WrapAroundPreservesOrder) {
   for (int i = 0; i < 6; ++i) {
-    q.getNextToWriteTo()->value = i;
+    auto *w = q.getNextToWriteTo();
+    ASSERT_NE(w, nullptr);
+    w->value = i;
     q.updateWriteIndex();
   }
   for (int i = 0; i < 6; ++i) {
     q.updateReadIndex();
   }
   for (int i = 100; i < 106; ++i) {
-    q.getNextToWriteTo()->value = i;
+    auto *w = q.getNextToWriteTo();
+    ASSERT_NE(w, nullptr);
+    w->value = i;
     q.updateWriteIndex();
   }
   for (int i = 100; i < 106; ++i) {
@@ -100,60 +112,77 @@ TEST_F(LFQueueTest, WrapAroundPreservesOrder) {
 
 // Verifies interleaved single writes and reads work correctly.
 TEST_F(LFQueueTest, InterleavedWriteRead) {
-  q.getNextToWriteTo()->value = 1;
+  auto *w1 = q.getNextToWriteTo();
+  ASSERT_NE(w1, nullptr);
+  w1->value = 1;
   q.updateWriteIndex();
   EXPECT_EQ(q.getNextToRead()->value, 1);
   q.updateReadIndex();
 
-  q.getNextToWriteTo()->value = 2;
+  auto *w2 = q.getNextToWriteTo();
+  ASSERT_NE(w2, nullptr);
+  w2->value = 2;
   q.updateWriteIndex();
   EXPECT_EQ(q.getNextToRead()->value, 2);
   q.updateReadIndex();
 
-  EXPECT_EQ(q.size(), 0u);
+  EXPECT_EQ(q.getNextToRead(), nullptr);
 }
 
 // Verifies a slot can be reused after being consumed.
 TEST_F(LFQueueTest, WriteSlotIsReusableAfterRead) {
-  q.getNextToWriteTo()->value = 9;
+  auto *w1 = q.getNextToWriteTo();
+  ASSERT_NE(w1, nullptr);
+  w1->value = 9;
   q.updateWriteIndex();
   q.updateReadIndex();
 
-  q.getNextToWriteTo()->value = 10;
+  auto *w2 = q.getNextToWriteTo();
+  ASSERT_NE(w2, nullptr);
+  w2->value = 10;
   q.updateWriteIndex();
   EXPECT_EQ(q.getNextToRead()->value, 10);
 }
 
-// Verifies size tracks a mixed sequence of operations.
-TEST_F(LFQueueTest, SizeTracksMultipleOps) {
-  EXPECT_EQ(q.size(), 0u);
-  q.getNextToWriteTo()->value = 1;
+// Verifies nullptr tracks a mixed sequence of operations.
+TEST_F(LFQueueTest, NullTracksMultipleOps) {
+  EXPECT_EQ(q.getNextToRead(), nullptr);
+  auto *w1 = q.getNextToWriteTo();
+  ASSERT_NE(w1, nullptr);
+  w1->value = 1;
   q.updateWriteIndex();
-  EXPECT_EQ(q.size(), 1u);
-  q.getNextToWriteTo()->value = 2;
+  EXPECT_NE(q.getNextToRead(), nullptr);
+  auto *w2 = q.getNextToWriteTo();
+  ASSERT_NE(w2, nullptr);
+  w2->value = 2;
   q.updateWriteIndex();
-  EXPECT_EQ(q.size(), 2u);
+  EXPECT_NE(q.getNextToRead(), nullptr);
   q.updateReadIndex();
-  EXPECT_EQ(q.size(), 1u);
+  EXPECT_NE(q.getNextToRead(), nullptr);
+  q.updateReadIndex();
+  EXPECT_EQ(q.getNextToRead(), nullptr);
 }
 
 // Verifies a larger power-of-two queue constructs and operates.
 TEST_F(LFQueueTest, LargePowerOfTwoQueueWorks) {
   LFQueue<TestElem> big(1024);
-  EXPECT_EQ(big.size(), 0u);
-  big.getNextToWriteTo()->value = 5;
+  EXPECT_EQ(big.getNextToRead(), nullptr);
+  auto *w = big.getNextToWriteTo();
+  ASSERT_NE(w, nullptr);
+  w->value = 5;
   big.updateWriteIndex();
   EXPECT_EQ(big.getNextToRead()->value, 5);
 }
 
 // Verifies draining the last element makes the queue read-empty again.
 TEST_F(LFQueueTest, DrainReturnsNullAgain) {
-  q.getNextToWriteTo()->value = 1;
+  auto *w = q.getNextToWriteTo();
+  ASSERT_NE(w, nullptr);
+  w->value = 1;
   q.updateWriteIndex();
   ASSERT_NE(q.getNextToRead(), nullptr);
   q.updateReadIndex();
   EXPECT_EQ(q.getNextToRead(), nullptr);
-  EXPECT_EQ(q.size(), 0u);
 }
 
 // Verifies non-power-of-two sizes are rejected (mask indexing requires PoT).
@@ -165,15 +194,17 @@ TEST(LFQueueDeathTest, NonPowerOfTwoSizeDies) {
 TEST_F(LFQueueTest, ManyWrapCyclesPreserveOrder) {
   int next = 0;
   for (int cycle = 0; cycle < 10; ++cycle) {
-    for (int i = 0; i < 8; ++i) {
-      q.getNextToWriteTo()->value = next++;
+    for (int i = 0; i < 7; ++i) {
+      auto *w = q.getNextToWriteTo();
+      ASSERT_NE(w, nullptr);
+      w->value = next++;
       q.updateWriteIndex();
     }
-    for (int i = 0; i < 8; ++i) {
+    for (int i = 0; i < 7; ++i) {
       ASSERT_NE(q.getNextToRead(), nullptr);
-      EXPECT_EQ(q.getNextToRead()->value, cycle * 8 + i);
+      EXPECT_EQ(q.getNextToRead()->value, cycle * 7 + i);
       q.updateReadIndex();
     }
   }
-  EXPECT_EQ(q.size(), 0u);
+  EXPECT_EQ(q.getNextToRead(), nullptr);
 }

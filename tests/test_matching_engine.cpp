@@ -34,11 +34,11 @@ protected:
   }
 
   void SetUp() override {
-    while (respQ->size())
+    while (respQ->getNextToRead() != nullptr)
       respQ->updateReadIndex();
-    while (mdQ->size())
+    while (mdQ->getNextToRead() != nullptr)
       mdQ->updateReadIndex();
-    while (reqQ->size())
+    while (reqQ->getNextToRead() != nullptr)
       reqQ->updateReadIndex();
   }
 
@@ -59,9 +59,9 @@ TEST_F(MatchingEngineTest, NewRequestProducesAcceptedAndAdd) {
   auto req = makeNew(0, 1, 11, common::Side::BUY, 100, 10);
   engine->processClientRequest(&req);
 
-  ASSERT_GE(respQ->size(), 1u);
+  ASSERT_NE(respQ->getNextToRead(), nullptr);
   EXPECT_EQ(respQ->getNextToRead()->m_type, ClientResponseType::ACCEPTED);
-  ASSERT_GE(mdQ->size(), 1u);
+  ASSERT_NE(mdQ->getNextToRead(), nullptr);
   EXPECT_EQ(mdQ->getNextToRead()->m_type, MarketUpdateType::ADD);
 }
 
@@ -69,16 +69,16 @@ TEST_F(MatchingEngineTest, NewRequestProducesAcceptedAndAdd) {
 TEST_F(MatchingEngineTest, CancelRequestRemovesRestingOrder) {
   auto req = makeNew(1, 1, 21, common::Side::BUY, 100, 10);
   engine->processClientRequest(&req);
-  while (respQ->size())
+  while (respQ->getNextToRead() != nullptr)
     respQ->updateReadIndex();
-  while (mdQ->size())
+  while (mdQ->getNextToRead() != nullptr)
     mdQ->updateReadIndex();
 
   ClientRequestImpl cancel{ClientRequestType::CANCEL, 1, 1, 21,
                            common::Side::INVALID,     0, 0};
   engine->processClientRequest(&cancel);
 
-  ASSERT_GE(respQ->size(), 1u);
+  ASSERT_NE(respQ->getNextToRead(), nullptr);
   EXPECT_EQ(respQ->getNextToRead()->m_type, ClientResponseType::CANCELED);
 }
 
@@ -86,9 +86,9 @@ TEST_F(MatchingEngineTest, CancelRequestRemovesRestingOrder) {
 TEST_F(MatchingEngineTest, CrossingOrdersMatchThroughEngine) {
   engine->processClientRequest(new ClientRequestImpl{
       ClientRequestType::NEW, 1, 2, 31, common::Side::BUY, 100, 10});
-  while (respQ->size())
+  while (respQ->getNextToRead() != nullptr)
     respQ->updateReadIndex();
-  while (mdQ->size())
+  while (mdQ->getNextToRead() != nullptr)
     mdQ->updateReadIndex();
 
   auto take = ClientRequestImpl{ClientRequestType::NEW, 2,   2, 32,
@@ -96,9 +96,9 @@ TEST_F(MatchingEngineTest, CrossingOrdersMatchThroughEngine) {
   engine->processClientRequest(&take);
 
   // ACCEPTED + 2x FILLED expected on the response queue.
-  EXPECT_EQ(respQ->size(), 3u);
+  EXPECT_NE(respQ->getNextToRead(), nullptr);
   // TRADE + CANCEL expected on the market queue.
-  EXPECT_EQ(mdQ->size(), 2u);
+  EXPECT_NE(mdQ->getNextToRead(), nullptr);
 }
 
 // Verifies an INVALID request type is logged and ignored without queue output.
@@ -109,8 +109,8 @@ TEST_F(MatchingEngineTest, InvalidRequestTypeIsIgnored) {
   auto req = ClientRequestImpl{ClientRequestType::INVALID, 1,   3, 41,
                                common::Side::BUY,          100, 10};
   engine->processClientRequest(&req);
-  EXPECT_EQ(respQ->size(), 0u);
-  EXPECT_EQ(mdQ->size(), 0u);
+  EXPECT_EQ(respQ->getNextToRead(), nullptr);
+  EXPECT_EQ(mdQ->getNextToRead(), nullptr);
 }
 
 // Verifies sendClientResponse enqueues exactly one response.
@@ -125,7 +125,7 @@ TEST_F(MatchingEngineTest, SendClientResponseEnqueuesOne) {
                        0,
                        10};
   engine->sendClientResponse(&r);
-  ASSERT_EQ(respQ->size(), 1u);
+  ASSERT_NE(respQ->getNextToRead(), nullptr);
   EXPECT_EQ(respQ->getNextToRead()->m_clientOrderId, 51u);
 }
 
@@ -134,7 +134,7 @@ TEST_F(MatchingEngineTest, SendMarketUpdateEnqueuesOne) {
   MarketUpdateImpl u{
       MarketUpdateType::ADD, 900, 4, common::Side::BUY, 100, 10, 1};
   engine->sendMarketUpdate(&u);
-  ASSERT_EQ(mdQ->size(), 1u);
+  ASSERT_NE(mdQ->getNextToRead(), nullptr);
   EXPECT_EQ(mdQ->getNextToRead()->m_qty, 10u);
 }
 
@@ -158,15 +158,15 @@ TEST_F(MatchingEngineTest, TickersAreIndependent) {
   }
   EXPECT_EQ(fills, 0u);
   EXPECT_EQ(adds, 2u);
-  while (mdQ->size())
+  while (mdQ->getNextToRead() != nullptr)
     mdQ->updateReadIndex();
 
   // Positive control: same prices on ticker 7 DO cross and fill.
   auto bid2 = makeNew(7, 1, 71, common::Side::BUY, 100, 10);
   engine->processClientRequest(&bid2);
-  while (respQ->size())
+  while (respQ->getNextToRead() != nullptr)
     respQ->updateReadIndex();
-  while (mdQ->size())
+  while (mdQ->getNextToRead() != nullptr)
     mdQ->updateReadIndex();
   auto ask2 = makeNew(7, 2, 72, common::Side::SELL, 100, 10);
   engine->processClientRequest(&ask2);

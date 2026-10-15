@@ -39,7 +39,7 @@ protected:
   }
 
   void SetUp() override {
-    while (outReq->size())
+    while (outReq->getNextToRead() != nullptr)
       outReq->updateReadIndex();
     cfg = TradeEngineConfigMap{};
     cfg.at(0).m_clip = 10;
@@ -71,11 +71,11 @@ protected:
     features.reset();
     engine.reset();
     book.reset();
-    while (outReq->size())
+    while (outReq->getNextToRead() != nullptr)
       outReq->updateReadIndex();
-    while (inResp->size())
+    while (inResp->getNextToRead() != nullptr)
       inResp->updateReadIndex();
-    while (inMd->size())
+    while (inMd->getNextToRead() != nullptr)
       inMd->updateReadIndex();
   }
 
@@ -106,7 +106,7 @@ std::unique_ptr<common::Logger> LiquidityTakerTest::logger = nullptr;
 TEST_F(LiquidityTakerTest, BookUpdateSendsNothing) {
   makeTwoSidedBook();
   taker->onOrderBookUpdate(0, 102, common::Side::SELL, book.get());
-  EXPECT_EQ(outReq->size(), 0u);
+  EXPECT_EQ(outReq->getNextToRead(), nullptr);
 }
 
 // Verifies a weak (below-threshold) aggressive ratio sends nothing.
@@ -121,7 +121,7 @@ TEST_F(LiquidityTakerTest, WeakSignalSendsNothing) {
                      common::INVALID_PRIORITY};
   features->onTradeUpdate(&t, book.get()); // Ratio 1/20 = 0.05 < 0.5.
   taker->onTradeUpdate(&t, book.get());
-  EXPECT_EQ(outReq->size(), 0u);
+  EXPECT_EQ(outReq->getNextToRead(), nullptr);
 }
 
 // Verifies a ratio exactly at threshold still triggers (book uses >=).
@@ -137,7 +137,7 @@ TEST_F(LiquidityTakerTest, ThresholdBoundaryTriggers) {
   features->onTradeUpdate(&t, book.get()); // Ratio 10/20 = 0.5 == threshold.
   ASSERT_DOUBLE_EQ(features->getAggresiveTradeQtyRatio(), 0.5);
   taker->onTradeUpdate(&t, book.get());
-  EXPECT_EQ(outReq->size(), 1u);
+  EXPECT_NE(outReq->getNextToRead(), nullptr);
 }
 
 // Verifies a strong aggressive BUY triggers exactly one buy at the ask with
@@ -153,7 +153,7 @@ TEST_F(LiquidityTakerTest, StrongBuySignalBuysAtAsk) {
                      common::INVALID_PRIORITY};
   features->onTradeUpdate(&t, book.get()); // Ratio 20/20 = 1.0 >= 0.5.
   taker->onTradeUpdate(&t, book.get());
-  ASSERT_EQ(outReq->size(), 1u);
+  ASSERT_NE(outReq->getNextToRead(), nullptr);
   const auto req = *outReq->getNextToRead();
   EXPECT_EQ(req.m_side, common::Side::BUY);
   EXPECT_EQ(req.m_price, 102u);
@@ -172,7 +172,7 @@ TEST_F(LiquidityTakerTest, StrongSellSignalSellsAtBid) {
                      common::INVALID_PRIORITY};
   features->onTradeUpdate(&t, book.get()); // Ratio 20/20 = 1.0 >= 0.5.
   taker->onTradeUpdate(&t, book.get());
-  ASSERT_EQ(outReq->size(), 1u);
+  ASSERT_NE(outReq->getNextToRead(), nullptr);
   const auto req = *outReq->getNextToRead();
   EXPECT_EQ(req.m_side, common::Side::SELL);
   EXPECT_EQ(req.m_price, 100u);
@@ -191,7 +191,7 @@ TEST_F(LiquidityTakerTest, InvalidRatioSendsNothing) {
                      10,
                      common::INVALID_PRIORITY};
   taker->onTradeUpdate(&t, book.get());
-  EXPECT_EQ(outReq->size(), 0u);
+  EXPECT_EQ(outReq->getNextToRead(), nullptr);
 }
 
 // Verifies order updates forward to the order manager (ACCEPTED -> LIVE)
@@ -207,9 +207,9 @@ TEST_F(LiquidityTakerTest, OrderUpdateForwardedWithoutNewRequests) {
                      common::INVALID_PRIORITY};
   features->onTradeUpdate(&t, book.get());
   taker->onTradeUpdate(&t, book.get());
-  ASSERT_EQ(outReq->size(), 1u);
+  ASSERT_NE(outReq->getNextToRead(), nullptr);
   const OrderId buyId = outReq->getNextToRead()->m_orderId;
-  while (outReq->size())
+  while (outReq->getNextToRead() != nullptr)
     outReq->updateReadIndex();
 
   ClientResponseImpl acc{ClientResponseType::ACCEPTED,
@@ -222,7 +222,7 @@ TEST_F(LiquidityTakerTest, OrderUpdateForwardedWithoutNewRequests) {
                          0,
                          10};
   taker->onOrderUpdate(&acc);
-  EXPECT_EQ(outReq->size(), 0u);
+  EXPECT_EQ(outReq->getNextToRead(), nullptr);
   EXPECT_EQ(
       oms->getOMOrderSideMap(0).at(sideToIndex(common::Side::BUY)).m_state,
       OMOrderState::LIVE);

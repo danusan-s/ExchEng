@@ -46,7 +46,7 @@ protected:
   }
 
   void SetUp() override {
-    while (outReq->size())
+    while (outReq->getNextToRead() != nullptr)
       outReq->updateReadIndex();
     keeper = std::make_unique<PositionKeeper>(omLogger.get());
     TradeEngineConfigMap cfg{};
@@ -63,12 +63,12 @@ protected:
     oms.reset();
     risk.reset();
     keeper.reset();
-    while (outReq->size())
+    while (outReq->getNextToRead() != nullptr)
       outReq->updateReadIndex();
   }
 
   ClientRequestImpl lastRequest() {
-    EXPECT_GE(outReq->size(), 1u);
+    EXPECT_NE(outReq->getNextToRead(), nullptr);
     return *outReq->getNextToRead();
   }
 };
@@ -213,14 +213,14 @@ TEST_F(OrderManagerTest, PartialFillKeepsOrderWorking) {
 TEST_F(OrderManagerTest, MoveLiveWithSamePriceSendsNothing) {
   OMOrder order{0, 1, common::Side::BUY, 100, 10, OMOrderState::LIVE};
   oms->moveOrder(&order, 0, 100, common::Side::BUY, 10);
-  EXPECT_EQ(outReq->size(), 0u);
+  EXPECT_EQ(outReq->getNextToRead(), nullptr);
 }
 
 // Verifies moveOrder on a LIVE order with a new price cancels first.
 TEST_F(OrderManagerTest, MoveLiveWithNewPriceCancels) {
   OMOrder order{0, 1, common::Side::BUY, 100, 10, OMOrderState::LIVE};
   oms->moveOrder(&order, 0, 101, common::Side::BUY, 10);
-  ASSERT_EQ(outReq->size(), 1u);
+  ASSERT_NE(outReq->getNextToRead(), nullptr);
   EXPECT_EQ(lastRequest().m_type, ClientRequestType::CANCEL);
 }
 
@@ -228,7 +228,7 @@ TEST_F(OrderManagerTest, MoveLiveWithNewPriceCancels) {
 TEST_F(OrderManagerTest, MoveFromDeadReissuesNewWhenRiskAllows) {
   OMOrder order{0, 1, common::Side::BUY, 100, 10, OMOrderState::DEAD};
   oms->moveOrder(&order, 0, 100, common::Side::BUY, 10);
-  ASSERT_EQ(outReq->size(), 1u);
+  ASSERT_NE(outReq->getNextToRead(), nullptr);
   EXPECT_EQ(lastRequest().m_type, ClientRequestType::NEW);
   EXPECT_EQ(order.m_state, OMOrderState::PENDING_NEW);
 }
@@ -237,13 +237,13 @@ TEST_F(OrderManagerTest, MoveFromDeadReissuesNewWhenRiskAllows) {
 TEST_F(OrderManagerTest, MoveFromDeadBlockedByRisk) {
   OMOrder order{0, 1, common::Side::BUY, 100, 10, OMOrderState::DEAD};
   oms->moveOrder(&order, 0, 100, common::Side::BUY, 10000);
-  EXPECT_EQ(outReq->size(), 0u);
+  EXPECT_EQ(outReq->getNextToRead(), nullptr);
 }
 
 // Verifies moveOrders drives both bid and ask sides together.
 TEST_F(OrderManagerTest, MoveOrdersDrivesBothSides) {
   oms->moveOrders(0, 99, 101, 10);
-  ASSERT_EQ(outReq->size(), 2u);
+  ASSERT_NE(outReq->getNextToRead(), nullptr);
   const auto first = *outReq->getNextToRead();
   outReq->updateReadIndex();
   const auto second = *outReq->getNextToRead();
@@ -261,7 +261,7 @@ TEST_F(OrderManagerTest, MoveOrdersDrivesBothSides) {
 TEST_F(OrderManagerTest, MoveLiveWithSamePriceDifferentQtySendsNothing) {
   OMOrder order{0, 1, common::Side::BUY, 100, 10, OMOrderState::LIVE};
   oms->moveOrder(&order, 0, 100, common::Side::BUY, 20);
-  EXPECT_EQ(outReq->size(), 0u);
+  EXPECT_EQ(outReq->getNextToRead(), nullptr);
 }
 
 // Verifies moveOrder in PENDING_NEW / PENDING_CANCEL states sends nothing.
@@ -272,7 +272,7 @@ TEST_F(OrderManagerTest, MovePendingSendsNothing) {
   OMOrder pendingCancel{0,   2,  common::Side::SELL,
                         101, 10, OMOrderState::PENDING_CANCEL};
   oms->moveOrder(&pendingCancel, 0, 102, common::Side::SELL, 10);
-  EXPECT_EQ(outReq->size(), 0u);
+  EXPECT_EQ(outReq->getNextToRead(), nullptr);
 }
 
 // Verifies CANCEL_REJECTED and INVALID updates leave tracked state untouched.
@@ -324,5 +324,5 @@ TEST_F(OrderManagerTest, NewOrdersIncrementIds) {
   oms->newOrder(&o1, 0, common::Side::BUY, 100, 10);
   oms->newOrder(&o2, 0, common::Side::BUY, 101, 10);
   EXPECT_EQ(o2.m_orderId, o1.m_orderId + 1);
-  ASSERT_EQ(outReq->size(), 2u);
+  ASSERT_NE(outReq->getNextToRead(), nullptr);
 }

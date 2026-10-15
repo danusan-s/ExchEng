@@ -51,11 +51,11 @@ protected:
   }
 
   void drainQueues() {
-    while (respQ->size())
+    while (respQ->getNextToRead() != nullptr)
       respQ->updateReadIndex();
-    while (mdQ->size())
+    while (mdQ->getNextToRead() != nullptr)
       mdQ->updateReadIndex();
-    while (reqQ->size())
+    while (reqQ->getNextToRead() != nullptr)
       reqQ->updateReadIndex();
   }
 

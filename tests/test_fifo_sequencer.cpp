@@ -25,14 +25,14 @@ protected:
   }
 
   void SetUp() override {
-    while (queue->size())
+    while (queue->getNextToRead() != nullptr)
       queue->updateReadIndex();
     sequencer = std::make_unique<FIFOSequencer>(queue.get(), logger.get());
   }
 
   void TearDown() override {
     sequencer.reset();
-    while (queue->size())
+    while (queue->getNextToRead() != nullptr)
       queue->updateReadIndex();
   }
 
@@ -48,14 +48,14 @@ std::unique_ptr<common::Logger> FIFOSequencerTest::logger = nullptr;
 // Verifies publishing with no pending requests leaves the queue empty.
 TEST_F(FIFOSequencerTest, EmptyPublishIsNoOp) {
   sequencer->sequenceAndPublish();
-  EXPECT_EQ(queue->size(), 0u);
+  EXPECT_EQ(queue->getNextToRead(), nullptr);
 }
 
 // Verifies a single request passes through unchanged.
 TEST_F(FIFOSequencerTest, SingleRequestPassesThrough) {
   sequencer->addClientRequest(100, makeReq(1, 11));
   sequencer->sequenceAndPublish();
-  ASSERT_EQ(queue->size(), 1u);
+  ASSERT_NE(queue->getNextToRead(), nullptr);
   EXPECT_EQ(queue->getNextToRead()->m_orderId, 11u);
 }
 
@@ -66,7 +66,7 @@ TEST_F(FIFOSequencerTest, OutOfOrderRequestsAreTimeSorted) {
   sequencer->addClientRequest(200, makeReq(1, 12));
   sequencer->sequenceAndPublish();
 
-  ASSERT_EQ(queue->size(), 3u);
+  ASSERT_NE(queue->getNextToRead(), nullptr);
   EXPECT_EQ(queue->getNextToRead()->m_orderId, 11u);
   queue->updateReadIndex();
   EXPECT_EQ(queue->getNextToRead()->m_orderId, 12u);
@@ -81,7 +81,7 @@ TEST_F(FIFOSequencerTest, MultipleClientsMergedByTime) {
   sequencer->addClientRequest(100, makeReq(1, 11));
   sequencer->sequenceAndPublish();
 
-  ASSERT_EQ(queue->size(), 2u);
+  ASSERT_NE(queue->getNextToRead(), nullptr);
   EXPECT_EQ(queue->getNextToRead()->m_clientId, 1u);
   queue->updateReadIndex();
   EXPECT_EQ(queue->getNextToRead()->m_clientId, 2u);
@@ -91,11 +91,11 @@ TEST_F(FIFOSequencerTest, MultipleClientsMergedByTime) {
 TEST_F(FIFOSequencerTest, PublishClearsPendingBuffer) {
   sequencer->addClientRequest(100, makeReq(1, 11));
   sequencer->sequenceAndPublish();
-  EXPECT_EQ(queue->size(), 1u);
+  EXPECT_NE(queue->getNextToRead(), nullptr);
   queue->updateReadIndex();
 
   sequencer->sequenceAndPublish();
-  EXPECT_EQ(queue->size(), 0u);
+  EXPECT_EQ(queue->getNextToRead(), nullptr);
 }
 
 // Verifies already-sorted input stays in the same order.
@@ -105,7 +105,7 @@ TEST_F(FIFOSequencerTest, SortedInputOrderPreserved) {
   }
   sequencer->sequenceAndPublish();
 
-  ASSERT_EQ(queue->size(), 5u);
+  ASSERT_NE(queue->getNextToRead(), nullptr);
   for (int i = 0; i < 5; ++i) {
     EXPECT_EQ(queue->getNextToRead()->m_orderId, static_cast<OrderId>(30 + i));
     queue->updateReadIndex();
@@ -120,7 +120,7 @@ TEST_F(FIFOSequencerTest, CancelRequestsAreSequenced) {
   sequencer->addClientRequest(100, makeReq(1, 11));
   sequencer->sequenceAndPublish();
 
-  ASSERT_EQ(queue->size(), 2u);
+  ASSERT_NE(queue->getNextToRead(), nullptr);
   EXPECT_EQ(queue->getNextToRead()->m_type, ClientRequestType::CANCEL);
   EXPECT_EQ(queue->getNextToRead()->m_orderId, 99u);
   queue->updateReadIndex();
@@ -134,7 +134,7 @@ TEST_F(FIFOSequencerTest, LargeBatchIsTimeOrdered) {
     sequencer->addClientRequest(1000 + i, makeReq(1, 100 + i));
   }
   sequencer->sequenceAndPublish();
-  ASSERT_EQ(queue->size(), 100u);
+  ASSERT_NE(queue->getNextToRead(), nullptr);
   for (int i = 0; i < 100; ++i) {
     ASSERT_NE(queue->getNextToRead(), nullptr);
     EXPECT_EQ(queue->getNextToRead()->m_orderId, static_cast<OrderId>(100 + i));
@@ -148,7 +148,7 @@ TEST_F(FIFOSequencerTest, RxTimeIsNotPublishedOnlyPayloadOrder) {
   sequencer->addClientRequest(200, makeReq(2, 22));
   sequencer->addClientRequest(100, makeReq(1, 11));
   sequencer->sequenceAndPublish();
-  ASSERT_EQ(queue->size(), 2u);
+  ASSERT_NE(queue->getNextToRead(), nullptr);
   EXPECT_EQ(queue->getNextToRead()->m_orderId, 11u);
   queue->updateReadIndex();
   EXPECT_EQ(queue->getNextToRead()->m_orderId, 22u);

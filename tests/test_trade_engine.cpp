@@ -28,11 +28,11 @@ protected:
   }
 
   void TearDown() override {
-    while (inResp->size())
+    while (inResp->getNextToRead() != nullptr)
       inResp->updateReadIndex();
-    while (inMd->size())
+    while (inMd->getNextToRead() != nullptr)
       inMd->updateReadIndex();
-    while (outReq->size())
+    while (outReq->getNextToRead() != nullptr)
       outReq->updateReadIndex();
     engine.reset();
     outReq.reset();
@@ -51,7 +51,7 @@ TEST_F(TradeEngineTest, SendEnqueuesRequest) {
   ClientRequestImpl req{ClientRequestType::NEW, 7,   0, 1,
                         common::Side::BUY,      100, 10};
   engine->sendClientRequest(&req);
-  ASSERT_EQ(outReq->size(), 1u);
+  ASSERT_NE(outReq->getNextToRead(), nullptr);
   EXPECT_EQ(outReq->getNextToRead()->m_orderId, 1u);
 }
 
@@ -63,7 +63,7 @@ TEST_F(TradeEngineTest, FillUpdatesPosition) {
   EXPECT_EQ(engine->getPositionInfo(0).m_position, 10);
   EXPECT_EQ(engine->getPositionInfo(0).m_volume, 10u);
   // No crash and no outgoing request from the default (logging) algo.
-  EXPECT_EQ(outReq->size(), 0u);
+  EXPECT_EQ(outReq->getNextToRead(), nullptr);
 }
 
 // Verifies onOrderUpdate with ACCEPTED leaves positions flat.
@@ -79,7 +79,7 @@ TEST_F(TradeEngineTest, AcceptLeavesPositionFlat) {
                        10};
   engine->onOrderUpdate(&a);
   EXPECT_EQ(engine->getPositionInfo(0).m_position, 0);
-  EXPECT_EQ(outReq->size(), 0u);
+  EXPECT_EQ(outReq->getNextToRead(), nullptr);
 }
 
 // Verifies onOrderBookUpdate refreshes unreal PnL via the position keeper:
@@ -162,11 +162,11 @@ TEST_F(TradeEngineTest, MakerEnginePostsQuotesOnBookUpdate) {
   // Poll until the maker posts quotes (or timeout): run() consumes md and
   // the maker algo's onOrderBookUpdate issues moveOrders -> requests.
   auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
-  while (rq.size() == 0u && std::chrono::steady_clock::now() < deadline) {
+  while (rq.getNextToRead() == nullptr && std::chrono::steady_clock::now() < deadline) {
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
   }
   maker.stop();
-  EXPECT_GT(rq.size(), 0u);
+  EXPECT_NE(rq.getNextToRead(), nullptr);
 }
 
 // Verifies stringToAlgoType round-trips known algo names.

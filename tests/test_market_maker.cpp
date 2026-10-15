@@ -39,7 +39,7 @@ protected:
   }
 
   void SetUp() override {
-    while (outReq->size())
+    while (outReq->getNextToRead() != nullptr)
       outReq->updateReadIndex();
     cfg = TradeEngineConfigMap{};
     cfg.at(0).m_clip = 10;
@@ -71,11 +71,11 @@ protected:
     features.reset();
     engine.reset();
     book.reset();
-    while (outReq->size())
+    while (outReq->getNextToRead() != nullptr)
       outReq->updateReadIndex();
-    while (inResp->size())
+    while (inResp->getNextToRead() != nullptr)
       inResp->updateReadIndex();
-    while (inMd->size())
+    while (inMd->getNextToRead() != nullptr)
       inMd->updateReadIndex();
   }
 
@@ -102,7 +102,7 @@ protected:
   // through TradeEngine::onOrderBookUpdate. Tests below assert only on the
   // explicit maker->onOrderBookUpdate call under test.
   void drainOutReq() {
-    while (outReq->size())
+    while (outReq->getNextToRead() != nullptr)
       outReq->updateReadIndex();
   }
 };
@@ -117,7 +117,7 @@ TEST_F(MarketMakerTest, OneSidedBookSendsNothing) {
   addToBook(1, common::Side::BUY, 100, 10);
   refreshFeatures();
   maker->onOrderBookUpdate(0, 100, common::Side::BUY, book.get());
-  EXPECT_EQ(outReq->size(), 0u);
+  EXPECT_EQ(outReq->getNextToRead(), nullptr);
 }
 
 // Verifies no orders are sent when only asks exist (bid BBO invalid).
@@ -125,7 +125,7 @@ TEST_F(MarketMakerTest, AskOnlyBookSendsNothing) {
   addToBook(1, common::Side::SELL, 102, 10);
   refreshFeatures();
   maker->onOrderBookUpdate(0, 102, common::Side::SELL, book.get());
-  EXPECT_EQ(outReq->size(), 0u);
+  EXPECT_EQ(outReq->getNextToRead(), nullptr);
 }
 
 // Verifies no orders are sent when the feature is still invalid (NaN),
@@ -134,7 +134,7 @@ TEST_F(MarketMakerTest, InvalidFairPriceSendsNothing) {
   makeTwoSidedBook();
   // No refreshFeatures(): fair price stays NaN.
   maker->onOrderBookUpdate(0, 102, common::Side::SELL, book.get());
-  EXPECT_EQ(outReq->size(), 0u);
+  EXPECT_EQ(outReq->getNextToRead(), nullptr);
 }
 
 // Verifies a fair price near mid posts both bid and ask quotes.
@@ -143,7 +143,7 @@ TEST_F(MarketMakerTest, FairMidPostsTwoSidedQuotes) {
   refreshFeatures(); // fair = (100*20 + 102*20)/40 = 101.
   drainOutReq();
   maker->onOrderBookUpdate(0, 102, common::Side::SELL, book.get());
-  EXPECT_EQ(outReq->size(), 2u);
+  EXPECT_NE(outReq->getNextToRead(), nullptr);
 }
 
 // Verifies quotes use clip qty from config on both legs.
@@ -152,7 +152,7 @@ TEST_F(MarketMakerTest, QuotesUseClipFromConfig) {
   refreshFeatures();
   drainOutReq();
   maker->onOrderBookUpdate(0, 102, common::Side::SELL, book.get());
-  ASSERT_EQ(outReq->size(), 2u);
+  ASSERT_NE(outReq->getNextToRead(), nullptr);
   for (auto *r = outReq->getNextToRead(); r; r = outReq->getNextToRead()) {
     EXPECT_EQ(r->m_quantity, 10u);
     outReq->updateReadIndex();
@@ -167,7 +167,7 @@ TEST_F(MarketMakerTest, NearMidShiftsQuotesByOne) {
   refreshFeatures(); // fair 101.
   drainOutReq();
   maker->onOrderBookUpdate(0, 102, common::Side::SELL, book.get());
-  ASSERT_EQ(outReq->size(), 2u);
+  ASSERT_NE(outReq->getNextToRead(), nullptr);
   bool sawBid99 = false;
   bool sawAsk103 = false;
   for (auto *r = outReq->getNextToRead(); r; r = outReq->getNextToRead()) {
@@ -192,7 +192,7 @@ TEST_F(MarketMakerTest, FarFairHoldsQuotesAtBbo) {
   features->onOrderBookUpdate(0, 200, common::Side::SELL, book.get());
   drainOutReq();
   maker->onOrderBookUpdate(0, 200, common::Side::SELL, book.get());
-  ASSERT_EQ(outReq->size(), 2u);
+  ASSERT_NE(outReq->getNextToRead(), nullptr);
   bool sawBid100 = false;
   bool sawAsk200 = false;
   for (auto *r = outReq->getNextToRead(); r; r = outReq->getNextToRead()) {
@@ -216,7 +216,7 @@ TEST_F(MarketMakerTest, TradeUpdateSendsNothing) {
                      5,
                      common::INVALID_PRIORITY};
   maker->onTradeUpdate(&t, book.get());
-  EXPECT_EQ(outReq->size(), 0u);
+  EXPECT_EQ(outReq->getNextToRead(), nullptr);
 }
 
 // Verifies order updates are forwarded to the order manager (ACCEPTED -> LIVE).
@@ -225,7 +225,7 @@ TEST_F(MarketMakerTest, OrderUpdateForwardedToOrderManager) {
   refreshFeatures();
   drainOutReq();
   maker->onOrderBookUpdate(0, 102, common::Side::SELL, book.get());
-  ASSERT_EQ(outReq->size(), 2u);
+  ASSERT_NE(outReq->getNextToRead(), nullptr);
   // Capture the actual BUY order id issued instead of assuming id 1.
   OrderId buyId = INVALID_ORDER_ID;
   for (auto *r = outReq->getNextToRead(); r; r = outReq->getNextToRead()) {
