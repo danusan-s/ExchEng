@@ -262,7 +262,11 @@ private:
 
     LogElement logElement{LogType::STRING, {}};
     std::memcpy(logElement.u_.s, value + i, length - i);
-    logElement.u_.s[length - i] = '\0'; // Null terminate the string
+    if (length - i < LOG_BUFFERED_STRING_SIZE) {
+      logElement.u_.s[length - i] = '\0'; // Null terminate the string
+    }
+    // A full-size chunk needs no terminator: the flush loop reads at most
+    // LOG_BUFFERED_STRING_SIZE bytes.
     pushValue(logElement);
   }
 

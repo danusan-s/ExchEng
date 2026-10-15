@@ -14,7 +14,6 @@ all: build
 clean:
 	@rm -rf $(BUILD_DIR)
 
-
 # ===== Build (normal) =====
 .PHONY: build
 build:
@@ -35,7 +34,6 @@ debug:
 .PHONY: rebuild
 rebuild: clean build
 
-
 # ===== Test =====
 .PHONY: test
 test:
@@ -45,11 +43,20 @@ test:
 	@$(CMAKE) --build $(BUILD_DIR) -j --target build-tests
 	@cd $(BUILD_DIR) && $(CTEST) --output-on-failure
 
+# ===== Benchmark =====
+.PHONY: benchmark
+benchmark:
+	@mkdir -p $(BUILD_DIR)
+	@cd $(BUILD_DIR) && $(CMAKE) .. \
+		-DCMAKE_BUILD_TYPE=$(BUILD_TYPE)
+	@$(CMAKE) --build $(BUILD_DIR) -j --target LoggerBenchmark MemPoolBenchmark
+	@./$(BUILD_DIR)/benchmark/logger/LoggerBenchmark
+	@./$(BUILD_DIR)/benchmark/mem_pool/MemPoolBenchmark
+
 # ===== Run exchange =====
 .PHONY: run_exchange
 run_exchange:
 	./build/ExchEng
-
 
 # ===== Run clients =====
 .PHONY: run_clients
