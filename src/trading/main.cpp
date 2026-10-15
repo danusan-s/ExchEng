@@ -62,6 +62,47 @@ static void shutdown() {
   }
 }
 
+// used to randomly initiate and cancel orders for testing purposes
+static void randomAlgo(ClientId clientId) {
+  g_logger->logInfo("%:% %() Starting RANDOM order flow\n", __FILE__, __LINE__,
+                    __FUNCTION__);
+  common::OrderId orderId = clientId * 1000;
+  std::vector<exchange::ClientRequestImpl> requests;
+  std::array<Price, ME_MAX_TICKERS> prices;
+  for (TickerId i = 0; i < ME_MAX_TICKERS; ++i) {
+    prices.at(i) = (rand() % 100) + 100;
+  }
+  g_tradeEngine->initLastEventTime();
+  for (size_t i = 0; i < 1000 && g_running.load(std::memory_order_relaxed);
+       ++i) {
+    g_logger->logInfo("%:% %() RANDOM order flow iteration:%\n", __FILE__,
+                      __LINE__, __FUNCTION__, i);
+    const TickerId tickerId = rand() % ME_MAX_TICKERS;
+    const Price price = prices.at(tickerId) + (rand() % 10) + 1;
+    const Quantity qty = (rand() % 100) + 1;
+    const Side side = (rand() % 2 == 0) ? Side::BUY : Side::SELL;
+    exchange::ClientRequestImpl request{exchange::ClientRequestType::NEW,
+                                        clientId,
+                                        tickerId,
+                                        orderId++,
+                                        side,
+                                        price,
+                                        qty};
+    g_tradeEngine->sendClientRequest(&request);
+    usleep(20 * 1000);
+
+    requests.push_back(request);
+
+    const auto cancelIndex = rand() % requests.size();
+    auto cancelRequest = requests.at(cancelIndex);
+    cancelRequest.m_type = exchange::ClientRequestType::CANCEL;
+    g_tradeEngine->sendClientRequest(&cancelRequest);
+    usleep(20 * 1000);
+  }
+  g_logger->logInfo("%:% %() Finished RANDOM order flow\n", __FILE__, __LINE__,
+                    __FUNCTION__);
+}
+
 int main(int argc, char **argv) {
   const common::ClientId clientId = atoi(argv[1]);
   srand(clientId);
@@ -111,8 +152,9 @@ int main(int argc, char **argv) {
   g_logger->logInfo("%:% %() Created ClientRequestQueue capacity:%\n", __FILE__,
                     __LINE__, __FUNCTION__, ME_MAX_CLIENT_UPDATES);
 
-  auto clientResponsesQueue = std::make_unique<exchange::ClientResponseImplQueue>(
-      ME_MAX_CLIENT_UPDATES);
+  auto clientResponsesQueue =
+      std::make_unique<exchange::ClientResponseImplQueue>(
+          ME_MAX_CLIENT_UPDATES);
   g_logger->logInfo("%:% %() Created ClientResponseQueue capacity:%\n",
                     __FILE__, __LINE__, __FUNCTION__, ME_MAX_CLIENT_UPDATES);
 
@@ -175,43 +217,7 @@ int main(int argc, char **argv) {
                     __FILE__, __LINE__, __FUNCTION__);
 
   if (algoType == AlgoType::RANDOM) {
-    g_logger->logInfo("%:% %() Starting RANDOM order flow\n", __FILE__,
-                      __LINE__, __FUNCTION__);
-    common::OrderId orderId = clientId * 1000;
-    std::vector<exchange::ClientRequestImpl> requests;
-    std::array<Price, ME_MAX_TICKERS> prices;
-    for (TickerId i = 0; i < ME_MAX_TICKERS; ++i) {
-      prices.at(i) = (rand() % 100) + 100;
-    }
-    g_tradeEngine->initLastEventTime();
-    for (size_t i = 0; i < 1000 && g_running.load(std::memory_order_relaxed);
-         ++i) {
-      g_logger->logInfo("%:% %() RANDOM order flow iteration:%\n", __FILE__,
-                        __LINE__, __FUNCTION__, i);
-      const TickerId tickerId = rand() % ME_MAX_TICKERS;
-      const Price price = prices.at(tickerId) + (rand() % 10) + 1;
-      const Quantity qty = (rand() % 100) + 1;
-      const Side side = (rand() % 2 == 0) ? Side::BUY : Side::SELL;
-      exchange::ClientRequestImpl request{exchange::ClientRequestType::NEW,
-                                          clientId,
-                                          tickerId,
-                                          orderId++,
-                                          side,
-                                          price,
-                                          qty};
-      g_tradeEngine->sendClientRequest(&request);
-      usleep(20 * 1000);
-
-      requests.push_back(request);
-
-      const auto cancelIndex = rand() % requests.size();
-      auto cancelRequest = requests.at(cancelIndex);
-      cancelRequest.m_type = exchange::ClientRequestType::CANCEL;
-      g_tradeEngine->sendClientRequest(&cancelRequest);
-      usleep(20 * 1000);
-    }
-    g_logger->logInfo("%:% %() Finished RANDOM order flow\n", __FILE__,
-                      __LINE__, __FUNCTION__);
+    randomAlgo(clientId);
   }
 
   // Wait till no activity (1s slices so SIGINT is honored promptly).

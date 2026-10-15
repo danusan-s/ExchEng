@@ -32,6 +32,10 @@ Threads talk only through single-producer / single-consumer lock-free queues. Ea
 - Order gateway (core 5) : TCP client to the order server, sends sequenced requests, checks sequenced responses
 - Trade engine (core 4) : Keeps a local order book per ticker, runs market-maker / liquidity-taker (or random flow), with feature engine, order manager, risk manager, and position keeper
 
+### Latency measurement
+
+Time in ns and rdtsc cycles is measured across the hot paths and logged via each component's logger. Plots: `scripts/perf_analysis.ipynb`.
+
 ### Build and Run
 
 ```bash
