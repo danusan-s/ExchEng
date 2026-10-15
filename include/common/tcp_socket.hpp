@@ -7,8 +7,8 @@
 
 namespace common {
 
-/// Size of our send and receive buffers in bytes.
-constexpr size_t TCP_BUFFER_SIZE = 64 * 1024 * 1024;
+// Size of our send and receive buffers in bytes.
+constexpr size_t TCP_BUFFER_SIZE = 8 * 1024 * 1024; // 8MB
 
 struct TCPSocket {
   explicit TCPSocket(Logger &logger) : m_logger(logger) {
