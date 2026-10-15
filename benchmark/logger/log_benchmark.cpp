@@ -5,8 +5,8 @@
 #include <string>
 #include <thread>
 
-#include "common/logging.hpp"
 #include "common/perf_utils.hpp"
+#include "new_logger.hpp"
 #include "old_logger.hpp"
 
 std::string random_string(size_t length) {
@@ -45,7 +45,7 @@ int main(int, char **) {
   using namespace std::literals::chrono_literals;
 
   {
-    common::Logger logger("logger_benchmark_new.log");
+    new_common::NewLogger logger("logger_benchmark_new.log");
     const auto cycles = benchmarkLogging(&logger);
     std::cout << "NEW LOGGER " << cycles << " CLOCK CYCLES PER OPERATION."
               << std::endl;
