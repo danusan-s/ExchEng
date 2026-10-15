@@ -51,7 +51,7 @@ void MarketDataPublisher::run() noexcept {
 
   while (m_running.load(std::memory_order_relaxed)) {
     for (auto marketUpdate = m_outgoingUpdateQueue->getNextToRead();
-         m_outgoingUpdateQueue->size() && marketUpdate;
+         marketUpdate != nullptr;
          marketUpdate = m_outgoingUpdateQueue->getNextToRead()) {
 
       TTT_MEASURE(T5_MarketDataPublisher_LFQueue_read, m_logger);

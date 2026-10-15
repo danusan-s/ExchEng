@@ -78,12 +78,10 @@ void TradeEngine::start() {
 }
 
 void TradeEngine::stop() {
-  while (m_incomingClientResponses->size() || m_incomingMarketUpdates->size()) {
-    m_logger.logInfo("%:% %() Waiting for incoming queues to drain. "
-                     "incomingClientResponses=% incomingMarketUpdates=%\n",
-                     __FILE__, __LINE__, __FUNCTION__,
-                     m_incomingClientResponses->size(),
-                     m_incomingMarketUpdates->size());
+  while (m_incomingClientResponses->getNextToRead() != nullptr ||
+         m_incomingMarketUpdates->getNextToRead() != nullptr) {
+    m_logger.logInfo("%:% %() Waiting for incoming queues to drain.\n",
+                     __FILE__, __LINE__, __FUNCTION__);
     using namespace std::literals::chrono_literals;
     std::this_thread::sleep_for(10ms);
   }

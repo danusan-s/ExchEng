@@ -12,6 +12,8 @@ namespace common {
 // Single produce single consumer safe queue
 template <typename T> class LFQueue final {
 public:
+  // Actual storable elements are numElems - 1, as one element is always
+  // reserved to differentiate between full and empty states.
   explicit LFQueue(std::size_t numElems) : m_store(numElems, T()) {
     ASSERT(numElems > 2 && std::popcount(numElems) == 1,
            "LFQueue size must be a power of 2 for efficient modulo operation.");
@@ -19,27 +21,37 @@ public:
   }
 
   T *getNextToWriteTo() noexcept {
-    return &m_store.at(m_nextWriteIndex);
+    const auto writeIndex = m_nextWriteIndex.load(std::memory_order_relaxed);
+    const auto nextReadIndex = m_nextReadIndex.load(std::memory_order_acquire);
+
+    if (((writeIndex + 1) & m_mask) == nextReadIndex) [[unlikely]] {
+      return nullptr; // Queue is full, cannot write to it.
+    }
+
+    return &m_store.at(writeIndex);
   }
 
   void updateWriteIndex() noexcept {
-    m_nextWriteIndex = (m_nextWriteIndex + 1) & m_mask;
-    m_numElements++;
+    const auto writeIndex = m_nextWriteIndex.load(std::memory_order_relaxed);
+    m_nextWriteIndex.store((writeIndex + 1) & m_mask,
+                           std::memory_order_release);
   }
 
   const T *getNextToRead() const noexcept {
-    return (size() ? &m_store.at(m_nextReadIndex) : nullptr);
+    const auto readIndex = m_nextReadIndex.load(std::memory_order_relaxed);
+    const auto nextWriteIndex =
+        m_nextWriteIndex.load(std::memory_order_acquire);
+
+    if (readIndex == nextWriteIndex) [[unlikely]] {
+      return nullptr; // Queue is empty, cannot read from it.
+    }
+
+    return &m_store.at(readIndex);
   }
 
   void updateReadIndex() noexcept {
-    m_nextReadIndex = (m_nextReadIndex + 1) & m_mask;
-    ASSERT(m_numElements != 0,
-           "Read an invalid element in:" + std::to_string(pthread_self()));
-    m_numElements--;
-  }
-
-  size_t size() const noexcept {
-    return m_numElements.load();
+    const auto readIndex = m_nextReadIndex.load(std::memory_order_relaxed);
+    m_nextReadIndex.store((readIndex + 1) & m_mask, std::memory_order_release);
   }
 
   LFQueue() = delete;
@@ -52,10 +64,8 @@ private:
   std::vector<T> m_store;
   size_t m_mask = 0;
 
-  std::atomic<size_t> m_nextWriteIndex = {0};
-  std::atomic<size_t> m_nextReadIndex = {0};
-
-  std::atomic<size_t> m_numElements = {0};
+  alignas(64) std::atomic<size_t> m_nextWriteIndex = {0};
+  alignas(64) std::atomic<size_t> m_nextReadIndex = {0};
 };
 
 } // namespace common

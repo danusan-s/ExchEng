@@ -42,7 +42,7 @@ void SnapshotSynthesizer::run() noexcept {
 
   while (m_running.load(std::memory_order_relaxed)) {
     for (auto snapshotUpdate = m_snapshotUpdateQueue->getNextToRead();
-         m_snapshotUpdateQueue->size() && snapshotUpdate;
+         snapshotUpdate != nullptr;
          snapshotUpdate = m_snapshotUpdateQueue->getNextToRead()) {
       m_logger.logData("%:% %() Processing %\n", __FILE__, __LINE__,
                        __FUNCTION__, snapshotUpdate->toString());

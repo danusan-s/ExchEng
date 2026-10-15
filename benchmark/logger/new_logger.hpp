@@ -105,7 +105,7 @@ public:
     std::cerr << common::getCurrentTimeStr(time_str)
               << " Flushing and closing Logger for " << m_fileName << std::endl;
 
-    while (m_queue.size()) {
+    while (m_queue.getNextToRead() != nullptr) {
       using namespace std::literals::chrono_literals;
       std::this_thread::sleep_for(1s);
     }
@@ -154,7 +154,7 @@ private:
   void flushQueue() noexcept {
     while (m_running) {
       bool written = false;
-      for (auto next = m_queue.getNextToRead(); m_queue.size() && next;
+      for (auto next = m_queue.getNextToRead(); next != nullptr;
            next = m_queue.getNextToRead()) {
         written = true;
         switch (next->type_) {
