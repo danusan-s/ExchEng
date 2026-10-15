@@ -63,7 +63,7 @@ void OrderServer::run() noexcept {
                        clientResponse->toString().c_str());
 
       auto socket = m_cidSockets.at(clientResponse->m_clientId);
-      ASSERT(socket != nullptr, "No socket found for ClientId: " +
+      DCHECK(socket != nullptr, "No socket found for ClientId: " +
                                     std::to_string(clientResponse->m_clientId));
 
       START_MEASURE(Exchange_OrderServer_send);

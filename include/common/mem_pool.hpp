@@ -17,8 +17,10 @@ public:
 
   template <typename... Args> T *allocate(Args... args) noexcept {
     auto obj_block = &(m_store.at(m_nextFreeIndex));
-    ASSERT(obj_block->is_free_, "Expected free ObjectBlock at index:" +
+
+    DCHECK(obj_block->is_free_, "Expected free ObjectBlock at index:" +
                                     std::to_string(m_nextFreeIndex));
+
     T *ret = &(obj_block->object_);
     ret = new (ret) T(args...);
     obj_block->is_free_ = false;
@@ -31,10 +33,16 @@ public:
   auto deallocate(const T *elem) noexcept {
     const auto elemIndex =
         (reinterpret_cast<const ObjectBlock *>(elem) - &m_store.at(0));
-    ASSERT(elemIndex >= 0 && static_cast<size_t>(elemIndex) < m_store.size(),
+
+    DCHECK(elemIndex >= 0 && static_cast<size_t>(elemIndex) < m_store.size(),
            "Element being deallocated does not belong to this Memory pool.");
-    ASSERT(!m_store.at(elemIndex).is_free_,
+    DCHECK(!m_store.at(elemIndex).is_free_,
            "Expected in-use ObjectBlock at index:" + std::to_string(elemIndex));
+
+    if constexpr (!std::is_trivially_destructible_v<T>) {
+      elem->~T();
+    }
+
     m_store.at(elemIndex).is_free_ = true;
   }
 
@@ -45,10 +53,9 @@ public:
       if (m_nextFreeIndex == m_store.size()) [[unlikely]] {
         m_nextFreeIndex = 0;
       }
-      if (initial_free_index == m_nextFreeIndex) [[unlikely]] {
-        ASSERT(initial_free_index != m_nextFreeIndex,
-               "Memory Pool out of space.");
-      }
+      // Currently crashes, explore flexible allocation
+      ASSERT(initial_free_index != m_nextFreeIndex,
+             "Memory Pool out of space.");
     }
   }
 

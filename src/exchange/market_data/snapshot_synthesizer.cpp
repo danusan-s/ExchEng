@@ -66,20 +66,19 @@ void SnapshotSynthesizer::addToSnapshot(
   auto &tickerOrders = m_tickerOrders.at(marketUpdate.m_tickerId);
   switch (marketUpdate.m_type) {
     case MarketUpdateType::ADD: {
-      auto order = tickerOrders.at(marketUpdate.m_marketOrderId);
-      ASSERT(order == nullptr,
+      DCHECK(tickerOrders.at(marketUpdate.m_marketOrderId) == nullptr,
              "Order already exists in snapshot. " + marketUpdate.toString());
       tickerOrders.at(marketUpdate.m_marketOrderId) =
           m_orderPool.allocate(marketUpdate);
     } break;
     case MarketUpdateType::CANCEL: {
       auto order = tickerOrders.at(marketUpdate.m_marketOrderId);
-      ASSERT(order != nullptr,
+      DCHECK(order != nullptr,
              "Order does not exist in snapshot. " + marketUpdate.toString());
-      ASSERT(order->m_marketOrderId == marketUpdate.m_marketOrderId,
+      DCHECK(order->m_marketOrderId == marketUpdate.m_marketOrderId,
              "Order in snapshot has a different order id. " +
                  marketUpdate.toString());
-      ASSERT(order->m_side == marketUpdate.m_side,
+      DCHECK(order->m_side == marketUpdate.m_side,
              "Order in snapshot has a different side. " +
                  marketUpdate.toString());
       m_orderPool.deallocate(order);
@@ -87,12 +86,12 @@ void SnapshotSynthesizer::addToSnapshot(
     } break;
     case MarketUpdateType::MODIFY: {
       auto order = tickerOrders.at(marketUpdate.m_marketOrderId);
-      ASSERT(order != nullptr,
+      DCHECK(order != nullptr,
              "Order does not exist in snapshot. " + marketUpdate.toString());
-      ASSERT(order->m_marketOrderId == marketUpdate.m_marketOrderId,
+      DCHECK(order->m_marketOrderId == marketUpdate.m_marketOrderId,
              "Order in snapshot has a different order id. " +
                  marketUpdate.toString());
-      ASSERT(order->m_side == marketUpdate.m_side,
+      DCHECK(order->m_side == marketUpdate.m_side,
              "Order in snapshot has a different side. " +
                  marketUpdate.toString());
 
@@ -106,7 +105,7 @@ void SnapshotSynthesizer::addToSnapshot(
     case MarketUpdateType::INVALID:
       break;
   }
-  ASSERT(
+  DCHECK(
       snapshotUpdate->m_seqNum == m_lastIncrementalSeqNum + 1,
       "Snapshot update seq num is not greater than last incremental seq num. " +
           snapshotUpdate->toString());

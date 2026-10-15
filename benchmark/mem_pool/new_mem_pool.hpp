@@ -1,7 +1,3 @@
-// Local copy of the free-list based MemPool for the isolated mem_pool
-// benchmark. Renamed to new_common::NewMemPool so it can be compared against
-// old_common::OldMemPool in the same translation unit. Shared infra
-// (ASSERT et al.) is still taken from include/common.
 #pragma once
 
 #include <list>
@@ -21,25 +17,18 @@ public:
   }
 
   template <typename... Args> T *allocate(Args... args) noexcept {
-    auto ind = m_nextFreeIndex;
-    if (!m_freeIndices.empty()) {
-      ind = m_freeIndices.front();
-      m_freeIndices.pop_front();
-    } else {
-      ++m_nextFreeIndex;
-    }
+    auto obj_block = &(m_store.at(m_nextFreeIndex));
 
-    ASSERT(ind < m_store.size(),
-           "Memory Pool out of space. Requested index:" + std::to_string(ind) +
-               " max size:" + std::to_string(m_store.size()));
-
-    auto obj_block = &(m_store.at(ind));
+#if !defined(NDEBUG)
     ASSERT(obj_block->is_free_, "Expected free ObjectBlock at index:" +
                                     std::to_string(m_nextFreeIndex));
+#endif
 
     T *ret = &(obj_block->object_);
     ret = new (ret) T(args...);
     obj_block->is_free_ = false;
+
+    updateNextFreeIndex();
 
     return ret;
   }
@@ -47,12 +36,34 @@ public:
   auto deallocate(const T *elem) noexcept {
     const auto elemIndex =
         (reinterpret_cast<const ObjectBlock *>(elem) - &m_store.at(0));
+
+#if !defined(NDEBUG)
     ASSERT(elemIndex >= 0 && static_cast<size_t>(elemIndex) < m_store.size(),
            "Element being deallocated does not belong to this Memory pool.");
     ASSERT(!m_store.at(elemIndex).is_free_,
            "Expected in-use ObjectBlock at index:" + std::to_string(elemIndex));
+#endif
+
+    if constexpr (!std::is_trivially_destructible_v<T>) {
+      elem->~T();
+    }
+
     m_store.at(elemIndex).is_free_ = true;
-    m_freeIndices.push_back(elemIndex);
+  }
+
+  auto updateNextFreeIndex() noexcept {
+    const auto initial_free_index = m_nextFreeIndex;
+    while (!m_store.at(m_nextFreeIndex).is_free_) {
+      ++m_nextFreeIndex;
+      if (m_nextFreeIndex == m_store.size()) [[unlikely]] {
+        m_nextFreeIndex = 0;
+      }
+      if (initial_free_index == m_nextFreeIndex) [[unlikely]] {
+        // Currently crashes, explore flexible allocation
+        ASSERT(initial_free_index != m_nextFreeIndex,
+               "Memory Pool out of space.");
+      }
+    }
   }
 
   NewMemPool() = delete;
@@ -68,7 +79,6 @@ private:
   };
 
   std::vector<ObjectBlock> m_store;
-  std::list<size_t> m_freeIndices;
 
   size_t m_nextFreeIndex = 0;
 };

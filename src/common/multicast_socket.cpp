@@ -62,7 +62,7 @@ auto MulticastSocket::sendAndRecv() noexcept -> bool {
 auto MulticastSocket::send(const void *data, size_t len) noexcept -> void {
   memcpy(m_outboundData.data() + m_nextSendValidIndex, data, len);
   m_nextSendValidIndex += len;
-  ASSERT(m_nextSendValidIndex < MCAST_BUFFER_SIZE,
+  DCHECK(m_nextSendValidIndex < MCAST_BUFFER_SIZE,
          "Mcast socket buffer filled up and sendAndRecv() not called.");
 }
 

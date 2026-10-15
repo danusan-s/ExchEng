@@ -5,10 +5,9 @@ namespace exchange {
 
 void FIFOSequencer::addClientRequest(
     Nanos recvTime, const ClientRequestImpl &clientRequest) noexcept {
-  if (m_pendingSize >= MAX_ME_PENDING_REQUESTS) [[unlikely]] {
-    FATAL("FIFOSequencer pending requests exceeded max size of " +
-          std::to_string(MAX_ME_PENDING_REQUESTS));
-  }
+  ASSERT(m_pendingSize < MAX_ME_PENDING_REQUESTS,
+         "FIFOSequencer pending requests exceeded max size of " +
+             std::to_string(MAX_ME_PENDING_REQUESTS));
   m_pendingRequests.at(m_pendingSize++) = {recvTime, clientRequest};
 }
 

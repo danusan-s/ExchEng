@@ -113,7 +113,7 @@ void TradeEngine::run() noexcept {
       TTT_MEASURE(T9_TradeEngine_LFQueue_read, m_logger);
       m_logger.logData("%:% %() Received market update: %\n", __FILE__,
                        __LINE__, __FUNCTION__, marketUpdate->toString());
-      ASSERT(marketUpdate->m_tickerId < m_tickerOrderBooks.size(),
+      DCHECK(marketUpdate->m_tickerId < m_tickerOrderBooks.size(),
              "Invalid tickerId: " + std::to_string(marketUpdate->m_tickerId));
       m_tickerOrderBooks.at(marketUpdate->m_tickerId)
           ->onMarketUpdate(marketUpdate);

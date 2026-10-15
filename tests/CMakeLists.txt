@@ -35,6 +35,7 @@ target_compile_features(excheng_test_app PUBLIC cxx_std_20)
 target_compile_options(excheng_test_app PRIVATE
   -O0 -g
   -Wall -Wextra
+  -UNDEBUG
 )
 if(EXCHENG_TEST_ASAN)
   target_compile_options(excheng_test_app PRIVATE -fsanitize=address)
@@ -66,7 +67,7 @@ foreach(TEST_FILE ${TEST_FILES})
     ${CMAKE_SOURCE_DIR}/include
   )
   target_compile_features(${TEST_NAME} PRIVATE cxx_std_20)
-  target_compile_options(${TEST_NAME} PRIVATE -O0 -g -Wall -Wextra)
+  target_compile_options(${TEST_NAME} PRIVATE -O0 -g -Wall -Wextra -UNDEBUG)
   if(EXCHENG_TEST_ASAN)
     target_compile_options(${TEST_NAME} PRIVATE -fsanitize=address)
     target_link_options(${TEST_NAME} PRIVATE -fsanitize=address)
