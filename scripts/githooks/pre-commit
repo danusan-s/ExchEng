@@ -1,0 +1,26 @@
+#!/bin/sh
+# Pre-commit hook: strip Jupyter cell outputs (embedded plot images / Plotly
+# JSON) from staged notebooks so they don't bloat the repo.
+# Figures are saved separately under scripts/plots/ by save_plot().
+FILES=$(git diff --cached --name-only --diff-filter=ACM | grep '\.ipynb$' || true)
+[ -z "$FILES" ] && exit 0
+echo "$FILES" | xargs python3 -c '
+import json, sys
+for path in sys.argv[1:]:
+    with open(path) as f:
+        nb = json.load(f)
+    stripped = False
+    for cell in nb.get("cells", []):
+        if cell.get("outputs"):
+            cell["outputs"] = []
+            stripped = True
+        if "execution_count" in cell and cell["execution_count"] is not None:
+            cell["execution_count"] = None
+            stripped = True
+    if stripped:
+        with open(path, "w") as f:
+            json.dump(nb, f, indent=1)
+            f.write("\n")
+        print(f"[pre-commit] stripped outputs: {path}")
+'
+echo "$FILES" | xargs git add --
