@@ -1,10 +1,12 @@
 #pragma once
 
+#include <algorithm>
 #include <atomic>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <string>
+#include <vector>
 
 #include "common/lf_queue.hpp"
 #include "common/macros.hpp"
@@ -89,6 +91,21 @@ public:
     std::filesystem::create_directories(
         std::filesystem::path(m_fileName).parent_path(), ec);
     ASSERT(!ec, "Could not create logs directory: " + ec.message());
+
+    if (std::filesystem::exists(m_fileName, ec)) {
+      const std::filesystem::path logPath(m_fileName);
+      const std::filesystem::path backupDir = logPath.parent_path() / "backup";
+      std::filesystem::create_directories(backupDir, ec);
+      ASSERT(!ec, "Could not create log backup directory: " + ec.message());
+
+      const std::filesystem::path backupFile =
+          backupDir / (logPath.stem().string() + "_" +
+                       std::to_string(common::getCurrentNanos()) +
+                       logPath.extension().string());
+      std::filesystem::rename(m_fileName, backupFile, ec);
+      ASSERT(!ec, "Could not back up existing log file: " + ec.message());
+    }
+
     m_file.open(m_fileName);
     ASSERT(m_file.is_open(), "Could not open log file:" + m_fileName);
     m_loggerThread = createAndStartThread(-1, "Common/Logger " + m_fileName,
@@ -207,7 +224,16 @@ private:
   }
 
   void pushValue(const LogElement &logElement) noexcept {
-    *(m_queue.getNextToWriteTo()) = logElement;
+    LogElement *slot = m_queue.getNextToWriteTo();
+    if (slot == nullptr) [[unlikely]] {
+      // Wait for queue to free up. BLOCKING, reccomend to use larger queue
+      do {
+        using namespace std::literals::chrono_literals;
+        std::this_thread::sleep_for(10us);
+        slot = m_queue.getNextToWriteTo();
+      } while (slot == nullptr);
+    }
+    *slot = logElement;
     m_queue.updateWriteIndex();
   }
 
