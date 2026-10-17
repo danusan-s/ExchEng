@@ -8,7 +8,20 @@ struct PoolObj {
   int a = 0;
   int b = 0;
   PoolObj() = default;
-  PoolObj(int x, int y) : a(x), b(y) {}
+  PoolObj(int x, int y) : a(x), b(y) {
+  }
+};
+
+static int g_destructed = 0;
+
+struct Tracked {
+  int v = 0;
+  Tracked() = default;
+  explicit Tracked(int x) : v(x) {
+  }
+  ~Tracked() {
+    ++g_destructed;
+  }
 };
 
 // Verifies allocate returns a usable object with forwarded constructor args.
@@ -30,32 +43,33 @@ TEST(MemPoolTest, SequentialAllocatesAreDistinct) {
   EXPECT_EQ(p2->a, 2);
 }
 
-// Verifies deallocated slot is NOT immediately reused: the allocator scans
-// forward from the last position (book logic), so the next allocate takes
-// the next free slot, and the freed slot is recycled on wrap-around.
-TEST(MemPoolTest, FreedSlotRecycledOnWrapAround) {
+// Verifies a freed slot is handed straight back on the very next allocate.
+// The new pool keeps a free-list stack: deallocate pushes the index and
+// allocate pops it, so the freed slot is reused immediately (no scan).
+TEST(MemPoolTest, FreedSlotImmediatelyReused) {
   MemPool<PoolObj> pool(4);
   PoolObj *p0 = pool.allocate(0, 0);
   PoolObj *p1 = pool.allocate(1, 1);
+  pool.deallocate(p0);
   PoolObj *p2 = pool.allocate(2, 2);
-  pool.deallocate(p0); // free index 0, next-free cursor sits at index 3.
-  PoolObj *p3 = pool.allocate(3, 3); // takes index 3, not the freed index 0.
-  EXPECT_NE(p3, p0);
-  EXPECT_NE(p3, p1);
-  EXPECT_NE(p3, p2);
-  EXPECT_EQ(p3->a, 3);
-  pool.deallocate(p1);
-  pool.deallocate(p2);
-  pool.deallocate(p3);
-  // All slots free again: allocator wraps and must hand out a usable slot.
-  PoolObj *p4 = pool.allocate(4, 4);
-  ASSERT_NE(p4, nullptr);
-  EXPECT_EQ(p4->a, 4);
+  EXPECT_EQ(p2, p0); // recycled right away, not on wrap-around.
+  EXPECT_EQ(p2->a, 2);
+  EXPECT_NE(p2, p1);
+}
+
+// Verifies the free list is LIFO: the most recently freed slot comes back
+// first on the following allocate.
+TEST(MemPoolTest, FreeListIsLifo) {
+  MemPool<PoolObj> pool(4);
+  PoolObj *p0 = pool.allocate(0, 0);
+  PoolObj *p1 = pool.allocate(1, 1);
+  pool.deallocate(p0);
+  pool.deallocate(p1); // freed last, so reused first.
+  EXPECT_EQ(pool.allocate(), p1);
+  EXPECT_EQ(pool.allocate(), p0);
 }
 
 // Verifies pool can be filled, drained and refilled cyclically.
-// Note: like the book, the pool asserts if asked to hold exactly its capacity,
-// so this stays one slot below full.
 TEST(MemPoolTest, FillDrainRefillCycle) {
   MemPool<PoolObj> pool(8);
   PoolObj *ptrs[4];
@@ -89,19 +103,21 @@ TEST(MemPoolTest, WorksWithPrimitiveType) {
   EXPECT_EQ(*p, 42);
 }
 
-// Verifies next-free-index scan skips over in-use blocks.
-TEST(MemPoolTest, SkipsInUseBlocksWhenScanning) {
-  MemPool<PoolObj> pool(4);
-  PoolObj *p0 = pool.allocate(0, 0);
-  PoolObj *p1 = pool.allocate(1, 1);
-  pool.deallocate(p0);
-  // Next allocate must not return the still-live p1 slot contents.
-  PoolObj *p2 = pool.allocate(2, 2);
-  EXPECT_EQ(p2->a, 2);
-  EXPECT_NE(p2, p1);
+// Verifies live slots are never handed out twice.
+TEST(MemPoolTest, LiveSlotsAreNotAliased) {
+  MemPool<PoolObj> pool(8);
+  PoolObj *held[6];
+  for (int i = 0; i < 6; ++i) {
+    held[i] = pool.allocate(i, i);
+  }
+  for (int i = 0; i < 6; ++i) {
+    for (int j = i + 1; j < 6; ++j) {
+      EXPECT_NE(held[i], held[j]);
+    }
+  }
 }
 
-// Verifies double-free is detectable (death via ASSERT) - documents ownership contract.
+// Verifies many allocated objects remain usable.
 TEST(MemPoolTest, AllocateManyObjectsAllUsable) {
   MemPool<PoolObj> pool(32);
   for (int i = 0; i < 16; ++i) {
@@ -112,25 +128,30 @@ TEST(MemPoolTest, AllocateManyObjectsAllUsable) {
   }
 }
 
-// Verifies a pool of N holds at most N-1 live objects: filling the Nth slot
-// trips the out-of-space ASSERT (death), since updateNextFreeIndex scans for
-// the next free slot eagerly after every allocate (book logic).
-TEST(MemPoolTest, OverCapacityDies) {
+// Verifies a pool of N holds exactly N live objects; the (N+1)th allocate
+// trips the out-of-space DCHECK (ASSERT in debug builds). Unlike the old
+// scan-based pool, there is no lost slot.
+TEST(MemPoolTest, ExactCapacityThenDies) {
   MemPool<PoolObj> pool(4);
-  PoolObj *held[3];
-  for (int i = 0; i < 3; ++i) {
+  PoolObj *held[4];
+  for (int i = 0; i < 4; ++i) {
     held[i] = pool.allocate(i, i);
-  }
-  for (int i = 0; i < 3; ++i) {
+    ASSERT_NE(held[i], nullptr);
     EXPECT_EQ(held[i]->a, i);
   }
   EXPECT_DEATH({ pool.allocate(99, 99); }, ".*");
 }
 
-// Verifies deallocating the same slot twice trips the in-use ASSERT (death).
-TEST(MemPoolTest, DoubleFreeDies) {
+// Documents that the pool does NOT detect double-free: deallocating an
+// already-free slot pushes a duplicate index, so the slot is handed out
+// twice. Callers must not double-free (unlike the old is_free_ pool).
+TEST(MemPoolTest, DoubleFreeIsNotDetectedAndAliases) {
   MemPool<PoolObj> pool(4);
   PoolObj *p = pool.allocate(1, 1);
   pool.deallocate(p);
-  EXPECT_DEATH({ pool.deallocate(p); }, ".*");
+  pool.deallocate(p); // duplicate index pushed onto the free list.
+  PoolObj *a = pool.allocate(2, 2);
+  PoolObj *b = pool.allocate(3, 3);
+  EXPECT_EQ(a, p);
+  EXPECT_EQ(b, p);
 }
