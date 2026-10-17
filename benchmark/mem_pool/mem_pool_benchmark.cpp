@@ -9,6 +9,7 @@
 struct BenchObj {
   int a = 0;
   int b = 0;
+  char padding[56] = {};
   BenchObj() = default;
   BenchObj(int x, int y) : a(x), b(y) {}
 };
