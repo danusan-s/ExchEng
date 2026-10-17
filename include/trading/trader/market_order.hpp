@@ -10,21 +10,24 @@ using namespace common;
 namespace trading {
 
 struct MarketOrder {
-  OrderId m_orderId;
-  Side m_side;
-  Price m_price;
-  Quantity m_qty;
-  Priority m_priority;
+  OrderId m_orderId;   // 64 bit
+  Price m_price;       // 64 bit
+  Priority m_priority; // 64 bit
+  Quantity m_qty;      // 32 bit
+  Side m_side;         // 8 bit
 
   MarketOrder *m_nextOrder = nullptr;
   MarketOrder *m_prevOrder = nullptr;
+
+  // Total size = 8 + 8 + 8 + 4 + 1 (pad 3) + 8 + 8 = 48
 
   MarketOrder() = default;
 
   MarketOrder(OrderId orderId, Side side, Price price, Quantity quantity,
               Priority priority, MarketOrder *nextOrder, MarketOrder *prevOrder)
-      : m_orderId(orderId), m_side(side), m_price(price), m_qty(quantity),
-        m_priority(priority), m_nextOrder(nextOrder), m_prevOrder(prevOrder) {
+      : m_orderId(orderId), m_price(price), m_priority(priority),
+        m_qty(quantity), m_side(side), m_nextOrder(nextOrder),
+        m_prevOrder(prevOrder) {
   }
 
   std::string toString() const {

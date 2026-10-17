@@ -10,17 +10,19 @@ using namespace common;
 namespace exchange {
 
 struct MEOrder {
-  TickerId m_tickerId = INVALID_TICKER_ID;
-  ClientId m_clientId = INVALID_CLIENT_ID;
-  OrderId m_clientOrderId = INVALID_ORDER_ID;
-  OrderId m_marketOrderId = INVALID_ORDER_ID;
-  Side m_side = Side::INVALID;
-  Price m_price = INVALID_PRICE;
-  Quantity m_qty = INVALID_QUANTITY;
-  Priority m_priority = INVALID_PRIORITY;
+  TickerId m_tickerId = INVALID_TICKER_ID;    // 32 bit -> 4 byte
+  ClientId m_clientId = INVALID_CLIENT_ID;    // 32 bit
+  OrderId m_clientOrderId = INVALID_ORDER_ID; // 64 bit -> 8 byte
+  OrderId m_marketOrderId = INVALID_ORDER_ID; // 64 bit
+  Price m_price = INVALID_PRICE;              // 64 bit
+  Priority m_priority = INVALID_PRIORITY;     // 64 bit
+  Quantity m_qty = INVALID_QUANTITY;          // 32 bit
+  Side m_side = Side::INVALID;                // 8 bit
 
   MEOrder *m_nextOrder = nullptr;
   MEOrder *m_prevOrder = nullptr;
+
+  // Total size = 4 + 4 + 8 + 8 + 8 + 8 + 4 + 1 (pad 3) + 8 + 8 = 64 bytes
 
   // Default constructor defined since we are going to memory pool these order
   // objects.
@@ -31,7 +33,7 @@ struct MEOrder {
           Priority priority, MEOrder *nextOrder, MEOrder *prevOrder)
       : m_tickerId(tickerId), m_clientId(clientId),
         m_clientOrderId(clientOrderId), m_marketOrderId(marketOrderId),
-        m_side(side), m_price(price), m_qty(qty), m_priority(priority),
+        m_price(price), m_priority(priority), m_qty(qty), m_side(side),
         m_nextOrder(nextOrder), m_prevOrder(prevOrder) {
   }
 
