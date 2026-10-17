@@ -35,12 +35,11 @@ auto MulticastSocket::sendAndRecv() noexcept -> bool {
   // Read data and dispatch callbacks if data is available - non blocking.
   const ssize_t n_rcv =
       recv(m_socketFd, m_inboundData.data() + m_nextReceiveValidIndex,
-           MCAST_BUFFER_SIZE - m_nextReceiveValidIndex, MSG_DONTWAIT);
+           MCAST_INCOMING_BUFFER_SIZE - m_nextReceiveValidIndex, MSG_DONTWAIT);
   if (n_rcv > 0) {
     m_nextReceiveValidIndex += n_rcv;
     m_logger.logInfo("%:% %() read socket:% len:%\n", __FILE__, __LINE__,
-                     __FUNCTION__,
-                     m_socketFd, m_nextReceiveValidIndex);
+                     __FUNCTION__, m_socketFd, m_nextReceiveValidIndex);
     m_recvCallback(this);
   }
 
@@ -50,8 +49,7 @@ auto MulticastSocket::sendAndRecv() noexcept -> bool {
                        MSG_DONTWAIT | MSG_NOSIGNAL);
 
     m_logger.logInfo("%:% %() send socket:% len:%\n", __FILE__, __LINE__,
-                     __FUNCTION__,
-                     m_socketFd, n);
+                     __FUNCTION__, m_socketFd, n);
   }
   m_nextSendValidIndex = 0;
 
@@ -62,7 +60,7 @@ auto MulticastSocket::sendAndRecv() noexcept -> bool {
 auto MulticastSocket::send(const void *data, size_t len) noexcept -> void {
   memcpy(m_outboundData.data() + m_nextSendValidIndex, data, len);
   m_nextSendValidIndex += len;
-  DCHECK(m_nextSendValidIndex < MCAST_BUFFER_SIZE,
+  DCHECK(m_nextSendValidIndex < MCAST_OUTGOING_BUFFER_SIZE,
          "Mcast socket buffer filled up and sendAndRecv() not called.");
 }
 

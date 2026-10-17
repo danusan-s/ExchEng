@@ -8,12 +8,14 @@
 namespace common {
 
 /// Size of send and receive buffers in bytes.
-constexpr size_t MCAST_BUFFER_SIZE = 64 * 1024 * 1024;
+constexpr size_t MCAST_OUTGOING_BUFFER_SIZE = 1024 * 1024; // 1MB
+constexpr size_t MCAST_INCOMING_BUFFER_SIZE =
+    256; // shouldn't really receive anything
 
 struct MulticastSocket {
   MulticastSocket(Logger &logger) : m_logger(logger) {
-    m_outboundData.resize(MCAST_BUFFER_SIZE);
-    m_inboundData.resize(MCAST_BUFFER_SIZE);
+    m_outboundData.resize(MCAST_OUTGOING_BUFFER_SIZE);
+    m_inboundData.resize(MCAST_INCOMING_BUFFER_SIZE);
   }
 
   /// Initialize multicast socket to read from or publish to a stream.
