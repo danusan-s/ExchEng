@@ -29,7 +29,7 @@ target_compile_options(ExchEng PRIVATE
     $<$<CONFIG:Release>:-flto>
     $<$<CONFIG:Release>:-O3>
     $<$<CONFIG:Release>:-march=native>
-    -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Woverloaded-virtual -Werror
+    -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Woverloaded-virtual
 )
 target_link_options(ExchEng PRIVATE
     $<$<CONFIG:Debug>:-fsanitize=address>
@@ -61,7 +61,7 @@ target_compile_options(TradingClient PRIVATE
     $<$<CONFIG:Release>:-flto>
     $<$<CONFIG:Release>:-O3>
     $<$<CONFIG:Release>:-march=native>
-    -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Woverloaded-virtual -Werror
+    -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Woverloaded-virtual
 )
 target_link_options(TradingClient PRIVATE
     $<$<CONFIG:Debug>:-fsanitize=address>

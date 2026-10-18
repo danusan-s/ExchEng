@@ -68,6 +68,7 @@ make run_demo
 - [ ] Reduce logging and asserts in production build.
 - [ ] Explore system setup such as isolcpu, NUMA etc.
 - [ ] Explore flexible structures to handle unlikely case of exceeding defined max values.
+- [ ] Validation of requests and graceful error handling instead of terminate.
 - [ ] Investigate CRTP and if it is worth it to replace strategy pattern in trade engine.
 
 ## System Specifications (Tested on)
