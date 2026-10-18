@@ -48,8 +48,8 @@ TEST_F(TradeEngineTest, ReportsClientId) {
 
 // Verifies sendClientRequest enqueues the request for the gateway.
 TEST_F(TradeEngineTest, SendEnqueuesRequest) {
-  ClientRequestImpl req{ClientRequestType::NEW, 7,   0, 1,
-                        common::Side::BUY,      100, 10};
+  ClientRequestImpl req(ClientRequestType::NEW, 7,   0, 1,
+                        common::Side::BUY,      100, 10);
   engine->sendClientRequest(&req);
   ASSERT_NE(outReq->getNextToRead(), nullptr);
   EXPECT_EQ(outReq->getNextToRead()->m_orderId, 1u);
@@ -57,8 +57,8 @@ TEST_F(TradeEngineTest, SendEnqueuesRequest) {
 
 // Verifies onOrderUpdate with FILL updates the position keeper.
 TEST_F(TradeEngineTest, FillUpdatesPosition) {
-  ClientResponseImpl f{ClientResponseType::FILLED, 7,   0,  1, 500,
-                       common::Side::BUY,          100, 10, 0};
+  ClientResponseImpl f(ClientResponseType::FILLED, 7,   0,  1, 500,
+                       common::Side::BUY,          100, 10, 0);
   engine->onOrderUpdate(&f);
   EXPECT_EQ(engine->getPositionInfo(0).m_position, 10);
   EXPECT_EQ(engine->getPositionInfo(0).m_volume, 10u);
@@ -68,7 +68,7 @@ TEST_F(TradeEngineTest, FillUpdatesPosition) {
 
 // Verifies onOrderUpdate with ACCEPTED leaves positions flat.
 TEST_F(TradeEngineTest, AcceptLeavesPositionFlat) {
-  ClientResponseImpl a{ClientResponseType::ACCEPTED,
+  ClientResponseImpl a(ClientResponseType::ACCEPTED,
                        7,
                        0,
                        1,
@@ -76,7 +76,7 @@ TEST_F(TradeEngineTest, AcceptLeavesPositionFlat) {
                        common::Side::BUY,
                        100,
                        0,
-                       10};
+                       10);
   engine->onOrderUpdate(&a);
   EXPECT_EQ(engine->getPositionInfo(0).m_position, 0);
   EXPECT_EQ(outReq->getNextToRead(), nullptr);
@@ -87,8 +87,8 @@ TEST_F(TradeEngineTest, AcceptLeavesPositionFlat) {
 // (MarketOrderBook::onMarketUpdate calls back into the engine). The book
 // needs two updates per side before its BBO refreshes.
 TEST_F(TradeEngineTest, OrderBookUpdateRefreshesUnreal) {
-  ClientResponseImpl f{ClientResponseType::FILLED, 7,   0,  1, 500,
-                       common::Side::BUY,          100, 10, 0};
+  ClientResponseImpl f(ClientResponseType::FILLED, 7,   0,  1, 500,
+                       common::Side::BUY,          100, 10, 0);
   engine->onOrderUpdate(&f);
   ASSERT_DOUBLE_EQ(engine->getPositionInfo(0).m_unrealPnL, 0.0);
 
@@ -115,7 +115,7 @@ TEST_F(TradeEngineTest, DefaultAlgoCallbacksAreSafe) {
   MarketUpdateImpl u{
       MarketUpdateType::ADD, 1, 0, common::Side::BUY, 100, 10, 1};
   engine->defaultAlgoOnTradeUpdate(&u, nullptr);
-  ClientResponseImpl a{ClientResponseType::ACCEPTED,
+  ClientResponseImpl a(ClientResponseType::ACCEPTED,
                        7,
                        0,
                        1,
@@ -123,7 +123,7 @@ TEST_F(TradeEngineTest, DefaultAlgoCallbacksAreSafe) {
                        common::Side::BUY,
                        100,
                        0,
-                       10};
+                       10);
   engine->defaultAlgoOnOrderUpdate(&a);
   SUCCEED();
 }

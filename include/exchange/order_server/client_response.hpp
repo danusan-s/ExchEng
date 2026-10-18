@@ -9,7 +9,6 @@ using namespace common;
 
 namespace exchange {
 
-#pragma pack(push, 1)
 enum class ClientResponseType : uint8_t {
   INVALID = 0,
   ACCEPTED = 1,
@@ -35,15 +34,28 @@ inline std::string clientResponseTypeToString(ClientResponseType type) {
 }
 
 struct ClientResponseImpl {
-  ClientResponseType m_type = ClientResponseType::INVALID;
-  ClientId m_clientId = INVALID_CLIENT_ID;
-  TickerId m_tickerId = INVALID_TICKER_ID;
-  OrderId m_clientOrderId = INVALID_ORDER_ID;
-  OrderId m_marketOrderId = INVALID_ORDER_ID;
-  Side m_side = Side::INVALID;
-  Price m_price = INVALID_PRICE;
-  Quantity m_execQty = INVALID_QUANTITY;
-  Quantity m_leavesQty = INVALID_QUANTITY;
+  ClientId m_clientId = INVALID_CLIENT_ID;                 // 32 bits
+  TickerId m_tickerId = INVALID_TICKER_ID;                 // 32 bits
+  OrderId m_clientOrderId = INVALID_ORDER_ID;              // 64 bits
+  OrderId m_marketOrderId = INVALID_ORDER_ID;              // 64 bits
+  Price m_price = INVALID_PRICE;                           // 64 bits
+  Quantity m_execQty = INVALID_QUANTITY;                   // 64 bits
+  Quantity m_leavesQty = INVALID_QUANTITY;                 // 64 bits
+  Side m_side = Side::INVALID;                             // 8 bits
+  ClientResponseType m_type = ClientResponseType::INVALID; // 8 bits
+  // Total size: 4 + 4 + 8 + 8 + 8 + 8 + 8 + 1 + 1 = 50 bytes (No padding)
+
+  ClientResponseImpl() = default;
+
+  ClientResponseImpl(ClientResponseType type, ClientId clientId,
+                     TickerId tickerId, OrderId clientOrderId,
+                     OrderId marketOrderId, Side side, Price price,
+                     Quantity execQty, Quantity leavesQty)
+      : m_clientId(clientId), m_tickerId(tickerId),
+        m_clientOrderId(clientOrderId), m_marketOrderId(marketOrderId),
+        m_price(price), m_execQty(execQty), m_leavesQty(leavesQty),
+        m_side(side), m_type(type) {
+  }
 
   std::string toString() const {
     std::ostringstream oss;
@@ -71,8 +83,6 @@ struct ClientResponse {
     return oss.str();
   }
 };
-
-#pragma pack(pop)
 
 using ClientResponseImplQueue = common::LFQueue<ClientResponseImpl>;
 

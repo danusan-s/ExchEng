@@ -235,7 +235,7 @@ TEST_F(MarketMakerTest, OrderUpdateForwardedToOrderManager) {
   }
   ASSERT_NE(buyId, INVALID_ORDER_ID);
 
-  ClientResponseImpl acc{ClientResponseType::ACCEPTED,
+  ClientResponseImpl acc(ClientResponseType::ACCEPTED,
                          7,
                          0,
                          buyId,
@@ -243,7 +243,7 @@ TEST_F(MarketMakerTest, OrderUpdateForwardedToOrderManager) {
                          common::Side::BUY,
                          100,
                          0,
-                         10};
+                         10);
   maker->onOrderUpdate(&acc);
   EXPECT_EQ(
       oms->getOMOrderSideMap(0).at(sideToIndex(common::Side::BUY)).m_state,

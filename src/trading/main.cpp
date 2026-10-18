@@ -81,13 +81,9 @@ static void randomAlgo(ClientId clientId) {
     const Price price = prices.at(tickerId) + (rand() % 10) + 1;
     const Quantity qty = (rand() % 100) + 1;
     const Side side = (rand() % 2 == 0) ? Side::BUY : Side::SELL;
-    exchange::ClientRequestImpl request{exchange::ClientRequestType::NEW,
-                                        clientId,
-                                        tickerId,
-                                        orderId++,
-                                        side,
-                                        price,
-                                        qty};
+    exchange::ClientRequestImpl request(
+        exchange::ClientRequestType::NEW, clientId, tickerId, orderId++, side,
+        price, qty);
     g_tradeEngine->sendClientRequest(&request);
     usleep(20 * 1000);
 

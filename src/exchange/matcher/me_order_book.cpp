@@ -50,15 +50,9 @@ void MEOrderBook::add(ClientId clientId, OrderId clientOrderId,
                       Quantity qty) noexcept {
   // We add to the book but nothing executed yet
   const auto marketOrderId = getNextMarketOrderId();
-  m_clientResponse = {ClientResponseType::ACCEPTED,
-                      clientId,
-                      tickerId,
-                      clientOrderId,
-                      marketOrderId,
-                      side,
-                      price,
-                      0,
-                      qty};
+  m_clientResponse =
+      ClientResponseImpl(ClientResponseType::ACCEPTED, clientId, tickerId,
+                         clientOrderId, marketOrderId, side, price, 0, qty);
 
   m_matchingEngine->sendClientResponse(&m_clientResponse);
 
@@ -171,25 +165,15 @@ void MEOrderBook::cancel(ClientId clientId, OrderId orderId,
     isCancellable = order != nullptr;
   }
   if (!isCancellable) [[unlikely]] {
-    m_clientResponse = {ClientResponseType::CANCEL_REJECTED,
-                        clientId,
-                        tickerId,
-                        orderId,
-                        INVALID_ORDER_ID,
-                        Side::INVALID,
-                        INVALID_PRICE,
-                        INVALID_QUANTITY,
-                        INVALID_QUANTITY};
+    m_clientResponse = ClientResponseImpl(
+        ClientResponseType::CANCEL_REJECTED, clientId, tickerId, orderId,
+        INVALID_ORDER_ID, Side::INVALID, INVALID_PRICE, INVALID_QUANTITY,
+        INVALID_QUANTITY);
   } else {
-    m_clientResponse = {ClientResponseType::CANCELED,
-                        clientId,
-                        tickerId,
-                        orderId,
-                        order->m_marketOrderId,
-                        order->m_side,
-                        order->m_price,
-                        INVALID_QUANTITY,
-                        order->m_qty};
+    m_clientResponse = ClientResponseImpl(
+        ClientResponseType::CANCELED, clientId, tickerId, orderId,
+        order->m_marketOrderId, order->m_side, order->m_price, INVALID_QUANTITY,
+        order->m_qty);
     m_marketUpdate = {MarketUpdateType::CANCEL,
                       order->m_marketOrderId,
                       tickerId,
@@ -294,25 +278,15 @@ void MEOrderBook::match(TickerId tickerId, ClientId clientId, Side side,
   *leavesQty -= execQty;
   order->m_qty -= execQty;
 
-  m_clientResponse = {ClientResponseType::FILLED,
-                      clientId,
-                      tickerId,
-                      clientOrderId,
-                      marketOrderId,
-                      side,
-                      order->m_price,
-                      execQty,
-                      *leavesQty};
+  m_clientResponse =
+      ClientResponseImpl(ClientResponseType::FILLED, clientId, tickerId,
+                         clientOrderId, marketOrderId, side, order->m_price,
+                         execQty, *leavesQty);
   m_matchingEngine->sendClientResponse(&m_clientResponse);
-  m_clientResponse = {ClientResponseType::FILLED,
-                      order->m_clientId,
-                      tickerId,
-                      order->m_clientOrderId,
-                      order->m_marketOrderId,
-                      order->m_side,
-                      order->m_price,
-                      execQty,
-                      order->m_qty};
+  m_clientResponse = ClientResponseImpl(
+      ClientResponseType::FILLED, order->m_clientId, tickerId,
+      order->m_clientOrderId, order->m_marketOrderId, order->m_side,
+      order->m_price, execQty, order->m_qty);
   m_matchingEngine->sendClientResponse(&m_clientResponse);
   m_marketUpdate = {
       MarketUpdateType::TRADE, INVALID_ORDER_ID, tickerId,        side,

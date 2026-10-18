@@ -9,9 +9,6 @@ using namespace common;
 
 namespace exchange {
 
-// Tightly pack these because these will be sent over the network
-// we want to minimize the size of the message.
-#pragma pack(push, 1)
 enum class ClientRequestType : uint8_t {
   INVALID = 0,
   NEW = 1,
@@ -32,13 +29,23 @@ inline std::string clientRequestTypeToString(ClientRequestType type) {
 }
 
 struct ClientRequestImpl {
-  ClientRequestType m_type = ClientRequestType::INVALID;
-  ClientId m_clientId = INVALID_CLIENT_ID;
-  TickerId m_tickerId = INVALID_TICKER_ID;
-  OrderId m_orderId = INVALID_ORDER_ID;
-  Side m_side = Side::INVALID;
-  Price m_price = INVALID_PRICE;
-  Quantity m_quantity = INVALID_QUANTITY;
+  ClientId m_clientId = INVALID_CLIENT_ID;               // 32 bits
+  TickerId m_tickerId = INVALID_TICKER_ID;               // 32 bits
+  OrderId m_orderId = INVALID_ORDER_ID;                  // 64 bits
+  Price m_price = INVALID_PRICE;                         // 64 bits
+  Quantity m_quantity = INVALID_QUANTITY;                // 64 bits
+  Side m_side = Side::INVALID;                           // 8 bits
+  ClientRequestType m_type = ClientRequestType::INVALID; // 8 bits
+  // Total size: 4 + 4 + 8 + 8 + 8 + 1 + 1 = 34 bytes (No padding)
+
+  ClientRequestImpl() = default;
+
+  ClientRequestImpl(ClientRequestType type, ClientId clientId,
+                    TickerId tickerId, OrderId orderId, Side side, Price price,
+                    Quantity quantity)
+      : m_clientId(clientId), m_tickerId(tickerId), m_orderId(orderId),
+        m_price(price), m_quantity(quantity), m_side(side), m_type(type) {
+  }
 
   std::string toString() const {
     std::ostringstream oss;
@@ -65,8 +72,6 @@ struct ClientRequest {
     return oss.str();
   }
 };
-
-#pragma pack(pop)
 
 using ClientRequestImplQueue = common::LFQueue<ClientRequestImpl>;
 

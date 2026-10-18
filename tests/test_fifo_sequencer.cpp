@@ -37,8 +37,8 @@ protected:
   }
 
   ClientRequestImpl makeReq(ClientId c, OrderId o) {
-    return ClientRequestImpl{ClientRequestType::NEW, c,   0, o,
-                             common::Side::BUY,      100, 10};
+    return ClientRequestImpl(ClientRequestType::NEW, c,   0, o,
+                             common::Side::BUY,      100, 10);
   }
 };
 
@@ -114,8 +114,8 @@ TEST_F(FIFOSequencerTest, SortedInputOrderPreserved) {
 
 // Verifies cancel-type requests are sequenced like new requests.
 TEST_F(FIFOSequencerTest, CancelRequestsAreSequenced) {
-  ClientRequestImpl cancel{ClientRequestType::CANCEL, 1, 0, 99,
-                           common::Side::INVALID,     0, 0};
+  ClientRequestImpl cancel(ClientRequestType::CANCEL, 1, 0, 99,
+                           common::Side::INVALID,     0, 0);
   sequencer->addClientRequest(50, cancel);
   sequencer->addClientRequest(100, makeReq(1, 11));
   sequencer->sequenceAndPublish();

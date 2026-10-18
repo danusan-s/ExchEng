@@ -30,8 +30,8 @@ protected:
   }
 
   ClientResponseImpl fill(TickerId t, common::Side s, Price p, Quantity q) {
-    return ClientResponseImpl{
-        ClientResponseType::FILLED, 1, t, 7, 900, s, p, q, 0};
+    return ClientResponseImpl(
+        ClientResponseType::FILLED, 1, t, 7, 900, s, p, q, 0);
   }
 };
 

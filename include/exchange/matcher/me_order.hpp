@@ -21,11 +21,8 @@ struct MEOrder {
 
   MEOrder *m_nextOrder = nullptr;
   MEOrder *m_prevOrder = nullptr;
-
   // Total size = 4 + 4 + 8 + 8 + 8 + 8 + 4 + 1 (pad 3) + 8 + 8 = 64 bytes
 
-  // Default constructor defined since we are going to memory pool these order
-  // objects.
   MEOrder() = default;
 
   MEOrder(TickerId tickerId, ClientId clientId, OrderId clientOrderId,

@@ -44,7 +44,7 @@ protected:
 
   ClientRequestImpl makeNew(TickerId t, ClientId c, OrderId o, common::Side s,
                             common::Price p, common::Quantity q) {
-    return ClientRequestImpl{ClientRequestType::NEW, c, t, o, s, p, q};
+    return ClientRequestImpl(ClientRequestType::NEW, c, t, o, s, p, q);
   }
 };
 
@@ -74,8 +74,8 @@ TEST_F(MatchingEngineTest, CancelRequestRemovesRestingOrder) {
   while (mdQ->getNextToRead() != nullptr)
     mdQ->updateReadIndex();
 
-  ClientRequestImpl cancel{ClientRequestType::CANCEL, 1, 1, 21,
-                           common::Side::INVALID,     0, 0};
+  ClientRequestImpl cancel(ClientRequestType::CANCEL, 1, 1, 21,
+                           common::Side::INVALID, 0, 0);
   engine->processClientRequest(&cancel);
 
   ASSERT_NE(respQ->getNextToRead(), nullptr);
@@ -84,15 +84,15 @@ TEST_F(MatchingEngineTest, CancelRequestRemovesRestingOrder) {
 
 // Verifies crossing NEW requests match through the engine queues.
 TEST_F(MatchingEngineTest, CrossingOrdersMatchThroughEngine) {
-  engine->processClientRequest(new ClientRequestImpl{
-      ClientRequestType::NEW, 1, 2, 31, common::Side::BUY, 100, 10});
+  engine->processClientRequest(new ClientRequestImpl(
+      ClientRequestType::NEW, 1, 2, 31, common::Side::BUY, 100, 10));
   while (respQ->getNextToRead() != nullptr)
     respQ->updateReadIndex();
   while (mdQ->getNextToRead() != nullptr)
     mdQ->updateReadIndex();
 
-  auto take = ClientRequestImpl{ClientRequestType::NEW, 2,   2, 32,
-                                common::Side::SELL,     100, 10};
+  auto take = ClientRequestImpl(ClientRequestType::NEW, 2,   2, 32,
+                                common::Side::SELL,     100, 10);
   engine->processClientRequest(&take);
 
   // ACCEPTED + 2x FILLED expected on the response queue.
@@ -106,8 +106,8 @@ TEST_F(MatchingEngineTest, CrossingOrdersMatchThroughEngine) {
 // FATALs (exits) on invalid types. This codebase logs and ignores so a bad
 // client cannot crash the engine.
 TEST_F(MatchingEngineTest, InvalidRequestTypeIsIgnored) {
-  auto req = ClientRequestImpl{ClientRequestType::INVALID, 1,   3, 41,
-                               common::Side::BUY,          100, 10};
+  auto req = ClientRequestImpl(ClientRequestType::INVALID, 1,   3, 41,
+                               common::Side::BUY,          100, 10);
   engine->processClientRequest(&req);
   EXPECT_EQ(respQ->getNextToRead(), nullptr);
   EXPECT_EQ(mdQ->getNextToRead(), nullptr);
@@ -115,7 +115,7 @@ TEST_F(MatchingEngineTest, InvalidRequestTypeIsIgnored) {
 
 // Verifies sendClientResponse enqueues exactly one response.
 TEST_F(MatchingEngineTest, SendClientResponseEnqueuesOne) {
-  ClientResponseImpl r{ClientResponseType::ACCEPTED,
+  ClientResponseImpl r(ClientResponseType::ACCEPTED,
                        5,
                        4,
                        51,
@@ -123,7 +123,7 @@ TEST_F(MatchingEngineTest, SendClientResponseEnqueuesOne) {
                        common::Side::BUY,
                        100,
                        0,
-                       10};
+                       10);
   engine->sendClientResponse(&r);
   ASSERT_NE(respQ->getNextToRead(), nullptr);
   EXPECT_EQ(respQ->getNextToRead()->m_clientOrderId, 51u);

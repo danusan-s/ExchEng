@@ -105,7 +105,7 @@ TEST_F(OrderManagerTest, CancelOrderSendsCancelAndPends) {
 TEST_F(OrderManagerTest, AcceptedMakesOrderLive) {
   OMOrder order;
   oms->newOrder(&order, 0, common::Side::BUY, 100, 10);
-  ClientResponseImpl acc{ClientResponseType::ACCEPTED,
+  ClientResponseImpl acc(ClientResponseType::ACCEPTED,
                          7,
                          0,
                          order.m_orderId,
@@ -113,7 +113,7 @@ TEST_F(OrderManagerTest, AcceptedMakesOrderLive) {
                          common::Side::BUY,
                          100,
                          0,
-                         10};
+                         10);
   oms->onOrderUpdate(&acc);
   EXPECT_EQ(
       oms->getOMOrderSideMap(0).at(sideToIndex(common::Side::BUY)).m_state,
@@ -124,7 +124,7 @@ TEST_F(OrderManagerTest, AcceptedMakesOrderLive) {
 TEST_F(OrderManagerTest, CanceledMakesOrderDead) {
   OMOrder order;
   oms->newOrder(&order, 0, common::Side::BUY, 100, 10);
-  ClientResponseImpl acc{ClientResponseType::ACCEPTED,
+  ClientResponseImpl acc(ClientResponseType::ACCEPTED,
                          7,
                          0,
                          order.m_orderId,
@@ -132,9 +132,9 @@ TEST_F(OrderManagerTest, CanceledMakesOrderDead) {
                          common::Side::BUY,
                          100,
                          0,
-                         10};
+                         10);
   oms->onOrderUpdate(&acc);
-  ClientResponseImpl cx{ClientResponseType::CANCELED,
+  ClientResponseImpl cx(ClientResponseType::CANCELED,
                         7,
                         0,
                         order.m_orderId,
@@ -142,7 +142,7 @@ TEST_F(OrderManagerTest, CanceledMakesOrderDead) {
                         common::Side::BUY,
                         100,
                         0,
-                        10};
+                        10);
   oms->onOrderUpdate(&cx);
   EXPECT_EQ(
       oms->getOMOrderSideMap(0).at(sideToIndex(common::Side::BUY)).m_state,
@@ -153,7 +153,7 @@ TEST_F(OrderManagerTest, CanceledMakesOrderDead) {
 TEST_F(OrderManagerTest, FullFillMakesOrderDead) {
   OMOrder order;
   oms->newOrder(&order, 0, common::Side::BUY, 100, 10);
-  ClientResponseImpl acc{ClientResponseType::ACCEPTED,
+  ClientResponseImpl acc(ClientResponseType::ACCEPTED,
                          7,
                          0,
                          order.m_orderId,
@@ -161,9 +161,9 @@ TEST_F(OrderManagerTest, FullFillMakesOrderDead) {
                          common::Side::BUY,
                          100,
                          0,
-                         10};
+                         10);
   oms->onOrderUpdate(&acc);
-  ClientResponseImpl fl{ClientResponseType::FILLED,
+  ClientResponseImpl fl(ClientResponseType::FILLED,
                         7,
                         0,
                         order.m_orderId,
@@ -171,7 +171,7 @@ TEST_F(OrderManagerTest, FullFillMakesOrderDead) {
                         common::Side::BUY,
                         100,
                         10,
-                        0};
+                        0);
   oms->onOrderUpdate(&fl);
   const auto &tracked =
       oms->getOMOrderSideMap(0).at(sideToIndex(common::Side::BUY));
@@ -183,7 +183,7 @@ TEST_F(OrderManagerTest, FullFillMakesOrderDead) {
 TEST_F(OrderManagerTest, PartialFillKeepsOrderWorking) {
   OMOrder order;
   oms->newOrder(&order, 0, common::Side::BUY, 100, 10);
-  ClientResponseImpl acc{ClientResponseType::ACCEPTED,
+  ClientResponseImpl acc(ClientResponseType::ACCEPTED,
                          7,
                          0,
                          order.m_orderId,
@@ -191,9 +191,9 @@ TEST_F(OrderManagerTest, PartialFillKeepsOrderWorking) {
                          common::Side::BUY,
                          100,
                          0,
-                         10};
+                         10);
   oms->onOrderUpdate(&acc);
-  ClientResponseImpl fl{ClientResponseType::FILLED,
+  ClientResponseImpl fl(ClientResponseType::FILLED,
                         7,
                         0,
                         order.m_orderId,
@@ -201,7 +201,7 @@ TEST_F(OrderManagerTest, PartialFillKeepsOrderWorking) {
                         common::Side::BUY,
                         100,
                         4,
-                        6};
+                        6);
   oms->onOrderUpdate(&fl);
   const auto &tracked =
       oms->getOMOrderSideMap(0).at(sideToIndex(common::Side::BUY));
@@ -279,7 +279,7 @@ TEST_F(OrderManagerTest, MovePendingSendsNothing) {
 TEST_F(OrderManagerTest, RejectAndInvalidUpdatesAreNoOps) {
   OMOrder order;
   oms->newOrder(&order, 0, common::Side::BUY, 100, 10);
-  ClientResponseImpl acc{ClientResponseType::ACCEPTED,
+  ClientResponseImpl acc(ClientResponseType::ACCEPTED,
                          7,
                          0,
                          order.m_orderId,
@@ -287,12 +287,12 @@ TEST_F(OrderManagerTest, RejectAndInvalidUpdatesAreNoOps) {
                          common::Side::BUY,
                          100,
                          0,
-                         10};
+                         10);
   oms->onOrderUpdate(&acc);
   ASSERT_EQ(
       oms->getOMOrderSideMap(0).at(sideToIndex(common::Side::BUY)).m_state,
       OMOrderState::LIVE);
-  ClientResponseImpl rej{ClientResponseType::CANCEL_REJECTED,
+  ClientResponseImpl rej(ClientResponseType::CANCEL_REJECTED,
                          7,
                          0,
                          order.m_orderId,
@@ -300,9 +300,9 @@ TEST_F(OrderManagerTest, RejectAndInvalidUpdatesAreNoOps) {
                          common::Side::BUY,
                          100,
                          0,
-                         10};
+                         10);
   oms->onOrderUpdate(&rej);
-  ClientResponseImpl inv{ClientResponseType::INVALID,
+  ClientResponseImpl inv(ClientResponseType::INVALID,
                          7,
                          0,
                          order.m_orderId,
@@ -310,7 +310,7 @@ TEST_F(OrderManagerTest, RejectAndInvalidUpdatesAreNoOps) {
                          common::Side::BUY,
                          100,
                          0,
-                         10};
+                         10);
   oms->onOrderUpdate(&inv);
   EXPECT_EQ(
       oms->getOMOrderSideMap(0).at(sideToIndex(common::Side::BUY)).m_state,

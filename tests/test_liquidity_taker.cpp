@@ -212,7 +212,7 @@ TEST_F(LiquidityTakerTest, OrderUpdateForwardedWithoutNewRequests) {
   while (outReq->getNextToRead() != nullptr)
     outReq->updateReadIndex();
 
-  ClientResponseImpl acc{ClientResponseType::ACCEPTED,
+  ClientResponseImpl acc(ClientResponseType::ACCEPTED,
                          7,
                          0,
                          buyId,
@@ -220,7 +220,7 @@ TEST_F(LiquidityTakerTest, OrderUpdateForwardedWithoutNewRequests) {
                          common::Side::BUY,
                          102,
                          0,
-                         10};
+                         10);
   taker->onOrderUpdate(&acc);
   EXPECT_EQ(outReq->getNextToRead(), nullptr);
   EXPECT_EQ(

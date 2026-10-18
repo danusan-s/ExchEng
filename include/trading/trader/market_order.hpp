@@ -18,7 +18,6 @@ struct MarketOrder {
 
   MarketOrder *m_nextOrder = nullptr;
   MarketOrder *m_prevOrder = nullptr;
-
   // Total size = 8 + 8 + 8 + 4 + 1 (pad 3) + 8 + 8 = 48
 
   MarketOrder() = default;
