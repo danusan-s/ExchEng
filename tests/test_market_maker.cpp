@@ -80,7 +80,7 @@ protected:
   }
 
   void addToBook(OrderId id, common::Side s, Price p, Quantity q) {
-    MarketUpdateImpl u{MarketUpdateType::ADD, id, 0, s, p, q, 1};
+    MarketUpdateImpl u(MarketUpdateType::ADD, id, 0, s, p, q, 1);
     book->onMarketUpdate(&u);
   }
 
@@ -208,13 +208,13 @@ TEST_F(MarketMakerTest, FarFairHoldsQuotesAtBbo) {
 
 // Verifies trade updates are ignored by the market maker.
 TEST_F(MarketMakerTest, TradeUpdateSendsNothing) {
-  MarketUpdateImpl t{MarketUpdateType::TRADE,
+  MarketUpdateImpl t(MarketUpdateType::TRADE,
                      common::INVALID_ORDER_ID,
                      0,
                      common::Side::BUY,
                      101,
                      5,
-                     common::INVALID_PRIORITY};
+                     common::INVALID_PRIORITY);
   maker->onTradeUpdate(&t, book.get());
   EXPECT_EQ(outReq->getNextToRead(), nullptr);
 }

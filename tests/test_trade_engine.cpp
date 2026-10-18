@@ -93,14 +93,14 @@ TEST_F(TradeEngineTest, OrderBookUpdateRefreshesUnreal) {
   ASSERT_DOUBLE_EQ(engine->getPositionInfo(0).m_unrealPnL, 0.0);
 
   auto *book = engine->getOrderBook(0);
-  const MarketUpdateImpl b1{
-      MarketUpdateType::ADD, 1, 0, common::Side::BUY, 110, 10, 1};
-  const MarketUpdateImpl b2{
-      MarketUpdateType::ADD, 2, 0, common::Side::BUY, 110, 10, 1};
-  const MarketUpdateImpl a1{
-      MarketUpdateType::ADD, 3, 0, common::Side::SELL, 112, 10, 1};
-  const MarketUpdateImpl a2{
-      MarketUpdateType::ADD, 4, 0, common::Side::SELL, 112, 10, 1};
+  const MarketUpdateImpl b1(
+      MarketUpdateType::ADD, 1, 0, common::Side::BUY, 110, 10, 1);
+  const MarketUpdateImpl b2(
+      MarketUpdateType::ADD, 2, 0, common::Side::BUY, 110, 10, 1);
+  const MarketUpdateImpl a1(
+      MarketUpdateType::ADD, 3, 0, common::Side::SELL, 112, 10, 1);
+  const MarketUpdateImpl a2(
+      MarketUpdateType::ADD, 4, 0, common::Side::SELL, 112, 10, 1);
   book->onMarketUpdate(&b1);
   book->onMarketUpdate(&b2);
   book->onMarketUpdate(&a1);
@@ -112,8 +112,8 @@ TEST_F(TradeEngineTest, OrderBookUpdateRefreshesUnreal) {
 // Verifies the default algo callbacks tolerate updates without crashing.
 TEST_F(TradeEngineTest, DefaultAlgoCallbacksAreSafe) {
   engine->defaultAlgoOnOrderBookUpdate(0, 100, common::Side::BUY, nullptr);
-  MarketUpdateImpl u{
-      MarketUpdateType::ADD, 1, 0, common::Side::BUY, 100, 10, 1};
+  MarketUpdateImpl u(
+      MarketUpdateType::ADD, 1, 0, common::Side::BUY, 100, 10, 1);
   engine->defaultAlgoOnTradeUpdate(&u, nullptr);
   ClientResponseImpl a(ClientResponseType::ACCEPTED,
                        7,
@@ -145,14 +145,14 @@ TEST_F(TradeEngineTest, MakerEnginePostsQuotesOnBookUpdate) {
   // wiring; instead verify the algo callback was overridden (not default) by
   // checking a book update yields requests. Feed market data through run()
   // briefly.
-  MarketUpdateImpl b1{
-      MarketUpdateType::ADD, 1, 0, common::Side::BUY, 100, 10, 1};
-  MarketUpdateImpl b2{
-      MarketUpdateType::ADD, 2, 0, common::Side::BUY, 100, 10, 1};
-  MarketUpdateImpl a1{
-      MarketUpdateType::ADD, 3, 0, common::Side::SELL, 102, 10, 1};
-  MarketUpdateImpl a2{
-      MarketUpdateType::ADD, 4, 0, common::Side::SELL, 102, 10, 1};
+  MarketUpdateImpl b1(
+      MarketUpdateType::ADD, 1, 0, common::Side::BUY, 100, 10, 1);
+  MarketUpdateImpl b2(
+      MarketUpdateType::ADD, 2, 0, common::Side::BUY, 100, 10, 1);
+  MarketUpdateImpl a1(
+      MarketUpdateType::ADD, 3, 0, common::Side::SELL, 102, 10, 1);
+  MarketUpdateImpl a2(
+      MarketUpdateType::ADD, 4, 0, common::Side::SELL, 102, 10, 1);
   for (const auto *u : {&b1, &b2, &a1, &a2}) {
     auto *w = md.getNextToWriteTo();
     *w = *u;

@@ -131,8 +131,8 @@ TEST_F(MatchingEngineTest, SendClientResponseEnqueuesOne) {
 
 // Verifies sendMarketUpdate enqueues exactly one update.
 TEST_F(MatchingEngineTest, SendMarketUpdateEnqueuesOne) {
-  MarketUpdateImpl u{
-      MarketUpdateType::ADD, 900, 4, common::Side::BUY, 100, 10, 1};
+  MarketUpdateImpl u(
+      MarketUpdateType::ADD, 900, 4, common::Side::BUY, 100, 10, 1);
   engine->sendMarketUpdate(&u);
   ASSERT_NE(mdQ->getNextToRead(), nullptr);
   EXPECT_EQ(mdQ->getNextToRead()->m_qty, 10u);

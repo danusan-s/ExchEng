@@ -59,7 +59,7 @@ protected:
   }
 
   void addToBook(OrderId id, common::Side s, Price p, Quantity q) {
-    MarketUpdateImpl u{MarketUpdateType::ADD, id, 0, s, p, q, 1};
+    MarketUpdateImpl u(MarketUpdateType::ADD, id, 0, s, p, q, 1);
     book->onMarketUpdate(&u);
   }
 };
@@ -118,10 +118,10 @@ TEST_F(FeatureEngineTest, StalePriceRetainedWhenBookBecomesOneSided) {
   features->onOrderBookUpdate(0, 102, common::Side::SELL, book.get());
   ASSERT_DOUBLE_EQ(features->getMarketPrice(), 101.0);
   // Remove the entire ask side: BBO ask goes invalid, feature must keep 101.
-  MarketUpdateImpl c1{
-      MarketUpdateType::CANCEL, 3, 0, common::Side::SELL, 102, 0, 1};
-  MarketUpdateImpl c2{
-      MarketUpdateType::CANCEL, 4, 0, common::Side::SELL, 102, 0, 1};
+  MarketUpdateImpl c1(
+      MarketUpdateType::CANCEL, 3, 0, common::Side::SELL, 102, 0, 1);
+  MarketUpdateImpl c2(
+      MarketUpdateType::CANCEL, 4, 0, common::Side::SELL, 102, 0, 1);
   book->onMarketUpdate(&c1);
   book->onMarketUpdate(&c2);
   ASSERT_EQ(book->getBBO()->m_askPrice, common::INVALID_PRICE);
@@ -135,13 +135,13 @@ TEST_F(FeatureEngineTest, AggressiveBuyRatioUsesAskQty) {
   addToBook(2, common::Side::BUY, 100, 10);
   addToBook(3, common::Side::SELL, 102, 10);
   addToBook(4, common::Side::SELL, 102, 10); // Ask BBO qty now 20.
-  MarketUpdateImpl t{MarketUpdateType::TRADE,
+  MarketUpdateImpl t(MarketUpdateType::TRADE,
                      common::INVALID_ORDER_ID,
                      0,
                      common::Side::BUY,
                      102,
                      10,
-                     common::INVALID_PRIORITY};
+                     common::INVALID_PRIORITY);
   features->onTradeUpdate(&t, book.get());
   EXPECT_DOUBLE_EQ(features->getAggresiveTradeQtyRatio(), 0.5);
 }
@@ -152,26 +152,26 @@ TEST_F(FeatureEngineTest, AggressiveSellRatioUsesBidQty) {
   addToBook(2, common::Side::BUY, 100, 20); // Bid BBO qty now 40.
   addToBook(3, common::Side::SELL, 102, 10);
   addToBook(4, common::Side::SELL, 102, 10);
-  MarketUpdateImpl t{MarketUpdateType::TRADE,
+  MarketUpdateImpl t(MarketUpdateType::TRADE,
                      common::INVALID_ORDER_ID,
                      0,
                      common::Side::SELL,
                      100,
                      10,
-                     common::INVALID_PRIORITY};
+                     common::INVALID_PRIORITY);
   features->onTradeUpdate(&t, book.get());
   EXPECT_DOUBLE_EQ(features->getAggresiveTradeQtyRatio(), 0.25);
 }
 
 // Verifies trade updates without a two-sided BBO leave the ratio invalid.
 TEST_F(FeatureEngineTest, TradeWithoutBboKeepsRatioInvalid) {
-  MarketUpdateImpl t{MarketUpdateType::TRADE,
+  MarketUpdateImpl t(MarketUpdateType::TRADE,
                      common::INVALID_ORDER_ID,
                      0,
                      common::Side::BUY,
                      100,
                      5,
-                     common::INVALID_PRIORITY};
+                     common::INVALID_PRIORITY);
   features->onTradeUpdate(&t, book.get());
   EXPECT_TRUE(std::isnan(features->getAggresiveTradeQtyRatio()));
 }
@@ -183,13 +183,13 @@ TEST_F(FeatureEngineTest, RatioAboveOneWhenTradeOutsizesBbo) {
   addToBook(2, common::Side::BUY, 100, 10);
   addToBook(3, common::Side::SELL, 102, 5);
   addToBook(4, common::Side::SELL, 102, 5); // Ask BBO qty now 10.
-  MarketUpdateImpl t{MarketUpdateType::TRADE,
+  MarketUpdateImpl t(MarketUpdateType::TRADE,
                      common::INVALID_ORDER_ID,
                      0,
                      common::Side::BUY,
                      102,
                      30,
-                     common::INVALID_PRIORITY};
+                     common::INVALID_PRIORITY);
   features->onTradeUpdate(&t, book.get());
   EXPECT_DOUBLE_EQ(features->getAggresiveTradeQtyRatio(), 3.0);
 }

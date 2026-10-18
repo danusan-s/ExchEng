@@ -8,7 +8,6 @@
 using namespace common;
 namespace exchange {
 
-#pragma pack(push, 1)
 enum class MarketUpdateType : uint8_t {
   INVALID = 0,
   ADD = 1,
@@ -43,14 +42,23 @@ inline const char *marketUpdateTypeToString(MarketUpdateType type) {
 }
 
 struct MarketUpdateImpl {
-  MarketUpdateType m_type = MarketUpdateType::INVALID;
+  TickerId m_tickerId = INVALID_TICKER_ID;             // 32 bit
+  Quantity m_qty = INVALID_QUANTITY;                   // 32 bit
+  OrderId m_marketOrderId = INVALID_ORDER_ID;          // 64 bit
+  Price m_price = INVALID_PRICE;                       // 64 bit
+  Priority m_priority = INVALID_PRIORITY;              // 64 bit
+  Side m_side = Side::INVALID;                         // 8 bit
+  MarketUpdateType m_type = MarketUpdateType::INVALID; // 8 bit
+  // Total size = 4 + 4 + 8 + 8 + 8 + 1 + 1 (pad 6) = 40 bytes
 
-  OrderId m_marketOrderId = INVALID_ORDER_ID;
-  TickerId m_tickerId = INVALID_TICKER_ID;
-  Side m_side = Side::INVALID;
-  Price m_price = INVALID_PRICE;
-  Quantity m_qty = INVALID_QUANTITY;
-  Priority m_priority = INVALID_PRIORITY;
+  MarketUpdateImpl() = default;
+
+  MarketUpdateImpl(MarketUpdateType type, OrderId marketOrderId,
+                   TickerId tickerId, Side side, Price price, Quantity qty,
+                   Priority priority)
+      : m_tickerId(tickerId), m_qty(qty), m_marketOrderId(marketOrderId),
+        m_price(price), m_priority(priority), m_side(side), m_type(type) {
+  }
 
   std::string toString() const {
     std::stringstream ss;
@@ -77,8 +85,6 @@ struct MarketUpdate {
     return ss.str();
   }
 };
-
-#pragma pack(pop)
 
 using MarketUpdateImplQueue = common::LFQueue<MarketUpdateImpl>;
 using MarketUpdateQueue = common::LFQueue<MarketUpdate>;

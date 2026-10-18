@@ -36,7 +36,7 @@ protected:
                           common::Priority pr = 1) {
     MarketUpdate u;
     u.m_seqNum = seq;
-    u.m_marketUpdate = MarketUpdateImpl{type, oid, t, s, p, q, pr};
+    u.m_marketUpdate = MarketUpdateImpl(type, oid, t, s, p, q, pr);
     return u;
   }
 };

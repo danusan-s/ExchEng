@@ -82,14 +82,14 @@ protected:
   // Builds a two-sided book with valid BBO (two updates per side, since the
   // book only refreshes BBO once the side already exists).
   void makeTwoSidedBook() {
-    MarketUpdateImpl b1{
-        MarketUpdateType::ADD, 1, 0, common::Side::BUY, 100, 10, 1};
-    MarketUpdateImpl b2{
-        MarketUpdateType::ADD, 2, 0, common::Side::BUY, 100, 10, 1};
-    MarketUpdateImpl a1{
-        MarketUpdateType::ADD, 3, 0, common::Side::SELL, 102, 10, 1};
-    MarketUpdateImpl a2{
-        MarketUpdateType::ADD, 4, 0, common::Side::SELL, 102, 10, 1};
+    MarketUpdateImpl b1(
+        MarketUpdateType::ADD, 1, 0, common::Side::BUY, 100, 10, 1);
+    MarketUpdateImpl b2(
+        MarketUpdateType::ADD, 2, 0, common::Side::BUY, 100, 10, 1);
+    MarketUpdateImpl a1(
+        MarketUpdateType::ADD, 3, 0, common::Side::SELL, 102, 10, 1);
+    MarketUpdateImpl a2(
+        MarketUpdateType::ADD, 4, 0, common::Side::SELL, 102, 10, 1);
     book->onMarketUpdate(&b1);
     book->onMarketUpdate(&b2);
     book->onMarketUpdate(&a1);
@@ -112,13 +112,13 @@ TEST_F(LiquidityTakerTest, BookUpdateSendsNothing) {
 // Verifies a weak (below-threshold) aggressive ratio sends nothing.
 TEST_F(LiquidityTakerTest, WeakSignalSendsNothing) {
   makeTwoSidedBook();
-  MarketUpdateImpl t{MarketUpdateType::TRADE,
+  MarketUpdateImpl t(MarketUpdateType::TRADE,
                      common::INVALID_ORDER_ID,
                      0,
                      common::Side::BUY,
                      102,
                      1,
-                     common::INVALID_PRIORITY};
+                     common::INVALID_PRIORITY);
   features->onTradeUpdate(&t, book.get()); // Ratio 1/20 = 0.05 < 0.5.
   taker->onTradeUpdate(&t, book.get());
   EXPECT_EQ(outReq->getNextToRead(), nullptr);
@@ -127,13 +127,13 @@ TEST_F(LiquidityTakerTest, WeakSignalSendsNothing) {
 // Verifies a ratio exactly at threshold still triggers (book uses >=).
 TEST_F(LiquidityTakerTest, ThresholdBoundaryTriggers) {
   makeTwoSidedBook(); // ask BBO qty 20.
-  MarketUpdateImpl t{MarketUpdateType::TRADE,
+  MarketUpdateImpl t(MarketUpdateType::TRADE,
                      common::INVALID_ORDER_ID,
                      0,
                      common::Side::BUY,
                      102,
                      10,
-                     common::INVALID_PRIORITY};
+                     common::INVALID_PRIORITY);
   features->onTradeUpdate(&t, book.get()); // Ratio 10/20 = 0.5 == threshold.
   ASSERT_DOUBLE_EQ(features->getAggresiveTradeQtyRatio(), 0.5);
   taker->onTradeUpdate(&t, book.get());
@@ -144,13 +144,13 @@ TEST_F(LiquidityTakerTest, ThresholdBoundaryTriggers) {
 // clip qty, and no bid leg (opposite leg is INVALID).
 TEST_F(LiquidityTakerTest, StrongBuySignalBuysAtAsk) {
   makeTwoSidedBook();
-  MarketUpdateImpl t{MarketUpdateType::TRADE,
+  MarketUpdateImpl t(MarketUpdateType::TRADE,
                      common::INVALID_ORDER_ID,
                      0,
                      common::Side::BUY,
                      102,
                      20,
-                     common::INVALID_PRIORITY};
+                     common::INVALID_PRIORITY);
   features->onTradeUpdate(&t, book.get()); // Ratio 20/20 = 1.0 >= 0.5.
   taker->onTradeUpdate(&t, book.get());
   ASSERT_NE(outReq->getNextToRead(), nullptr);
@@ -163,13 +163,13 @@ TEST_F(LiquidityTakerTest, StrongBuySignalBuysAtAsk) {
 // Verifies a strong aggressive SELL triggers exactly one sell at the bid.
 TEST_F(LiquidityTakerTest, StrongSellSignalSellsAtBid) {
   makeTwoSidedBook();
-  MarketUpdateImpl t{MarketUpdateType::TRADE,
+  MarketUpdateImpl t(MarketUpdateType::TRADE,
                      common::INVALID_ORDER_ID,
                      0,
                      common::Side::SELL,
                      100,
                      20,
-                     common::INVALID_PRIORITY};
+                     common::INVALID_PRIORITY);
   features->onTradeUpdate(&t, book.get()); // Ratio 20/20 = 1.0 >= 0.5.
   taker->onTradeUpdate(&t, book.get());
   ASSERT_NE(outReq->getNextToRead(), nullptr);
@@ -183,13 +183,13 @@ TEST_F(LiquidityTakerTest, StrongSellSignalSellsAtBid) {
 TEST_F(LiquidityTakerTest, InvalidRatioSendsNothing) {
   makeTwoSidedBook();
   // No feature update, so ratio stays NaN.
-  MarketUpdateImpl t{MarketUpdateType::TRADE,
+  MarketUpdateImpl t(MarketUpdateType::TRADE,
                      common::INVALID_ORDER_ID,
                      0,
                      common::Side::BUY,
                      102,
                      10,
-                     common::INVALID_PRIORITY};
+                     common::INVALID_PRIORITY);
   taker->onTradeUpdate(&t, book.get());
   EXPECT_EQ(outReq->getNextToRead(), nullptr);
 }
@@ -198,13 +198,13 @@ TEST_F(LiquidityTakerTest, InvalidRatioSendsNothing) {
 // while sending no new requests themselves.
 TEST_F(LiquidityTakerTest, OrderUpdateForwardedWithoutNewRequests) {
   makeTwoSidedBook();
-  MarketUpdateImpl t{MarketUpdateType::TRADE,
+  MarketUpdateImpl t(MarketUpdateType::TRADE,
                      common::INVALID_ORDER_ID,
                      0,
                      common::Side::BUY,
                      102,
                      20,
-                     common::INVALID_PRIORITY};
+                     common::INVALID_PRIORITY);
   features->onTradeUpdate(&t, book.get());
   taker->onTradeUpdate(&t, book.get());
   ASSERT_NE(outReq->getNextToRead(), nullptr);

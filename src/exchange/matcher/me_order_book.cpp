@@ -71,13 +71,9 @@ void MEOrderBook::add(ClientId clientId, OrderId clientOrderId,
     addOrderToBook(newOrder);
     END_MEASURE(Exchange_MEOrderBook_addOrderToBook, (*m_logger));
 
-    m_marketUpdate = {MarketUpdateType::ADD,
-                      marketOrderId,
-                      tickerId,
-                      side,
-                      price,
-                      leavesQty,
-                      priority};
+    m_marketUpdate = MarketUpdateImpl(MarketUpdateType::ADD, marketOrderId,
+                                     tickerId, side, price, leavesQty,
+                                     priority);
     m_matchingEngine->sendMarketUpdate(&m_marketUpdate);
   }
 }
@@ -174,13 +170,10 @@ void MEOrderBook::cancel(ClientId clientId, OrderId orderId,
         ClientResponseType::CANCELED, clientId, tickerId, orderId,
         order->m_marketOrderId, order->m_side, order->m_price, INVALID_QUANTITY,
         order->m_qty);
-    m_marketUpdate = {MarketUpdateType::CANCEL,
-                      order->m_marketOrderId,
-                      tickerId,
-                      order->m_side,
-                      order->m_price,
-                      0,
-                      order->m_priority};
+    m_marketUpdate = MarketUpdateImpl(MarketUpdateType::CANCEL,
+                                     order->m_marketOrderId, tickerId,
+                                     order->m_side, order->m_price, 0,
+                                     order->m_priority);
 
     START_MEASURE(Exchange_MEOrderBook_removeOrderFromBook);
     removeOrderFromBook(order);
@@ -288,19 +281,16 @@ void MEOrderBook::match(TickerId tickerId, ClientId clientId, Side side,
       order->m_clientOrderId, order->m_marketOrderId, order->m_side,
       order->m_price, execQty, order->m_qty);
   m_matchingEngine->sendClientResponse(&m_clientResponse);
-  m_marketUpdate = {
-      MarketUpdateType::TRADE, INVALID_ORDER_ID, tickerId,        side,
-      order->m_price,          execQty,          INVALID_PRIORITY};
+  m_marketUpdate = MarketUpdateImpl(MarketUpdateType::TRADE, INVALID_ORDER_ID,
+                                   tickerId, side, order->m_price, execQty,
+                                   INVALID_PRIORITY);
   m_matchingEngine->sendMarketUpdate(&m_marketUpdate);
 
   if (!order->m_qty) {
-    m_marketUpdate = {MarketUpdateType::CANCEL,
-                      order->m_marketOrderId,
-                      tickerId,
-                      order->m_side,
-                      order->m_price,
-                      orderQty,
-                      INVALID_PRIORITY};
+    m_marketUpdate = MarketUpdateImpl(MarketUpdateType::CANCEL,
+                                     order->m_marketOrderId, tickerId,
+                                     order->m_side, order->m_price, orderQty,
+                                     INVALID_PRIORITY);
     m_matchingEngine->sendMarketUpdate(&m_marketUpdate);
 
     START_MEASURE(Exchange_MEOrderBook_removeOrderFromBook);
@@ -310,13 +300,10 @@ void MEOrderBook::match(TickerId tickerId, ClientId clientId, Side side,
     return;
   }
 
-  m_marketUpdate = {MarketUpdateType::MODIFY,
-                    order->m_marketOrderId,
-                    tickerId,
-                    order->m_side,
-                    order->m_price,
-                    order->m_qty,
-                    order->m_priority};
+  m_marketUpdate = MarketUpdateImpl(MarketUpdateType::MODIFY,
+                                   order->m_marketOrderId, tickerId,
+                                   order->m_side, order->m_price, order->m_qty,
+                                   order->m_priority);
   m_matchingEngine->sendMarketUpdate(&m_marketUpdate);
 }
 

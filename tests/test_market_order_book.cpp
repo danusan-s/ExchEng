@@ -60,7 +60,7 @@ protected:
 
   MarketUpdateImpl addUpd(OrderId oid, common::Side s, Price p, Quantity q,
                           Priority pr = 1) {
-    return MarketUpdateImpl{MarketUpdateType::ADD, oid, 0, s, p, q, pr};
+    return MarketUpdateImpl(MarketUpdateType::ADD, oid, 0, s, p, q, pr);
   }
 };
 
@@ -115,8 +115,8 @@ TEST_F(TradingBookTest, BidQtyAggregatesAtSamePrice) {
 TEST_F(TradingBookTest, ModifyUpdatesQtyAndBbo) {
   auto u = addUpd(1, common::Side::BUY, 100, 10);
   book->onMarketUpdate(&u);
-  MarketUpdateImpl mod{
-      MarketUpdateType::MODIFY, 1, 0, common::Side::BUY, 100, 4, 1};
+  MarketUpdateImpl mod(
+      MarketUpdateType::MODIFY, 1, 0, common::Side::BUY, 100, 4, 1);
   book->onMarketUpdate(&mod);
   EXPECT_EQ(book->getBBO()->m_bidQty, 4u);
 }
@@ -134,14 +134,14 @@ TEST_F(TradingBookTest, ModifyIgnoresPriceChange) {
   ASSERT_EQ(book->getBBO()->m_bidQty, 17u);
   // MODIFY qty to 4 but claim price 99: stored qty updates, price level and
   // BBO do not (bidChanged = 99 >= 100 is false).
-  MarketUpdateImpl mod{
-      MarketUpdateType::MODIFY, 1, 0, common::Side::BUY, 99, 4, 1};
+  MarketUpdateImpl mod(
+      MarketUpdateType::MODIFY, 1, 0, common::Side::BUY, 99, 4, 1);
   book->onMarketUpdate(&mod);
   EXPECT_EQ(book->getBBO()->m_bidPrice, 100u);
   EXPECT_EQ(book->getBBO()->m_bidQty, 17u);
   // A same-price MODIFY does refresh and shows the new qty.
-  MarketUpdateImpl mod2{
-      MarketUpdateType::MODIFY, 1, 0, common::Side::BUY, 100, 4, 1};
+  MarketUpdateImpl mod2(
+      MarketUpdateType::MODIFY, 1, 0, common::Side::BUY, 100, 4, 1);
   book->onMarketUpdate(&mod2);
   EXPECT_EQ(book->getBBO()->m_bidQty, 11u); // 4 + 7.
 }
@@ -150,8 +150,8 @@ TEST_F(TradingBookTest, ModifyIgnoresPriceChange) {
 TEST_F(TradingBookTest, CancelLastOrderClearsLevel) {
   auto u = addUpd(1, common::Side::BUY, 100, 10);
   book->onMarketUpdate(&u);
-  MarketUpdateImpl c{
-      MarketUpdateType::CANCEL, 1, 0, common::Side::BUY, 100, 0, 1};
+  MarketUpdateImpl c(
+      MarketUpdateType::CANCEL, 1, 0, common::Side::BUY, 100, 0, 1);
   book->onMarketUpdate(&c);
   EXPECT_EQ(book->getBBO()->m_bidPrice, common::INVALID_PRICE);
 }
@@ -162,13 +162,13 @@ TEST_F(TradingBookTest, ClearDropsOldOrdersAndRebuilds) {
   auto a = addUpd(2, common::Side::SELL, 101, 5);
   book->onMarketUpdate(&b);
   book->onMarketUpdate(&a);
-  MarketUpdateImpl c{MarketUpdateType::CLEAR,
+  MarketUpdateImpl c(MarketUpdateType::CLEAR,
                      0,
                      0,
                      common::Side::INVALID,
                      common::INVALID_PRICE,
                      0,
-                     common::INVALID_PRIORITY};
+                     common::INVALID_PRIORITY);
   book->onMarketUpdate(&c);
   // Rebuild with two bids; the second refreshes BBO to the new level.
   auto n1 = addUpd(3, common::Side::BUY, 99, 7);
@@ -188,13 +188,13 @@ TEST_F(TradingBookTest, TradeDoesNotMutateBook) {
   book->onMarketUpdate(&b1);
   book->onMarketUpdate(&b2);
   ASSERT_EQ(book->getBBO()->m_bidQty, 17u);
-  MarketUpdateImpl t{MarketUpdateType::TRADE,
+  MarketUpdateImpl t(MarketUpdateType::TRADE,
                      common::INVALID_ORDER_ID,
                      0,
                      common::Side::BUY,
                      100,
                      3,
-                     common::INVALID_PRIORITY};
+                     common::INVALID_PRIORITY);
   book->onMarketUpdate(&t);
   EXPECT_EQ(book->getBBO()->m_bidQty, 17u);
 }
@@ -223,8 +223,8 @@ TEST_F(TradingBookTest, CancelBestPromotesNextLevel) {
   auto high = addUpd(2, common::Side::BUY, 100, 5);
   book->onMarketUpdate(&low);
   book->onMarketUpdate(&high);
-  MarketUpdateImpl c{
-      MarketUpdateType::CANCEL, 2, 0, common::Side::BUY, 100, 0, 2};
+  MarketUpdateImpl c(
+      MarketUpdateType::CANCEL, 2, 0, common::Side::BUY, 100, 0, 2);
   book->onMarketUpdate(&c);
   EXPECT_EQ(book->getBBO()->m_bidPrice, 99u);
 }

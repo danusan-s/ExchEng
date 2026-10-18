@@ -118,9 +118,9 @@ void SnapshotSynthesizer::publishSnapshot() noexcept {
   // num the snapshot is based on.
   const MarketUpdate snapshotStartUpdate{
       snapshotSize++,
-      {MarketUpdateType::SNAPSHOT_START, m_lastIncrementalSeqNum,
-       INVALID_TICKER_ID, Side::INVALID, INVALID_PRICE, INVALID_QUANTITY,
-       INVALID_PRIORITY}};
+      MarketUpdateImpl(MarketUpdateType::SNAPSHOT_START,
+                       m_lastIncrementalSeqNum, INVALID_TICKER_ID, Side::INVALID,
+                       INVALID_PRICE, INVALID_QUANTITY, INVALID_PRIORITY)};
 
   m_snapshotSocket.send(&snapshotStartUpdate, sizeof(MarketUpdate));
 
@@ -140,8 +140,9 @@ void SnapshotSynthesizer::publishSnapshot() noexcept {
       if (order != nullptr) {
         const MarketUpdate snapshotUpdate{
             snapshotSize++,
-            {MarketUpdateType::ADD, order->m_marketOrderId, order->m_tickerId,
-             order->m_side, order->m_price, order->m_qty, order->m_priority}};
+            MarketUpdateImpl(MarketUpdateType::ADD, order->m_marketOrderId,
+                             order->m_tickerId, order->m_side, order->m_price,
+                             order->m_qty, order->m_priority)};
         m_snapshotSocket.send(&snapshotUpdate, sizeof(MarketUpdate));
       }
     }
@@ -149,9 +150,9 @@ void SnapshotSynthesizer::publishSnapshot() noexcept {
 
   const MarketUpdate snapshotEndUpdate{
       snapshotSize++,
-      {MarketUpdateType::SNAPSHOT_END, m_lastIncrementalSeqNum,
-       INVALID_TICKER_ID, Side::INVALID, INVALID_PRICE, INVALID_QUANTITY,
-       INVALID_PRIORITY}};
+      MarketUpdateImpl(MarketUpdateType::SNAPSHOT_END, m_lastIncrementalSeqNum,
+                       INVALID_TICKER_ID, Side::INVALID, INVALID_PRICE,
+                       INVALID_QUANTITY, INVALID_PRIORITY)};
   m_snapshotSocket.send(&snapshotEndUpdate, sizeof(MarketUpdate));
 
   m_snapshotSocket.sendAndRecv();
