@@ -41,6 +41,8 @@ private:
 
   std::array<RecvTimeClientRequest, MAX_ME_PENDING_REQUESTS> m_pendingRequests;
   size_t m_pendingSize = 0;
+
+  void sortPendingRequests() noexcept;
 };
 
 } // namespace exchange

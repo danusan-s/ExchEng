@@ -11,6 +11,22 @@ void FIFOSequencer::addClientRequest(
   m_pendingRequests.at(m_pendingSize++) = {recvTime, clientRequest};
 }
 
+void FIFOSequencer::sortPendingRequests() noexcept {
+  auto &requests = m_pendingRequests;
+
+  for (size_t i = 1; i < m_pendingSize; ++i) {
+    RecvTimeClientRequest elem = std::move(requests[i]);
+    size_t j = i;
+
+    while (j > 0 && elem < requests[j - 1]) {
+      requests[j] = std::move(requests[j - 1]);
+      --j;
+    }
+
+    requests[j] = std::move(elem);
+  }
+}
+
 void FIFOSequencer::sequenceAndPublish() noexcept {
   if (m_pendingSize == 0) [[unlikely]] {
     return;
@@ -19,12 +35,7 @@ void FIFOSequencer::sequenceAndPublish() noexcept {
   m_logger->logInfo("%:% %() Sequencing and publishing % pending requests\n",
                     __FILE__, __LINE__, __FUNCTION__, m_pendingSize);
 
-  // Thinking was that we have a small number of pending requests (max 1024)
-  // and these would be in nearly sorted order so insertion sort would be good.
-  // std::sort typically uses insertion sort for small arrays in most
-  // implementations
-  std::sort(m_pendingRequests.begin(),
-            m_pendingRequests.begin() + m_pendingSize);
+  sortPendingRequests();
 
   for (size_t i = 0; i < m_pendingSize; ++i) {
     const auto &req = m_pendingRequests.at(i);

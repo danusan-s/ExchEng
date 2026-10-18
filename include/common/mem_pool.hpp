@@ -22,6 +22,9 @@ public:
     m_free.pop_back();
 
     T *ret = &(m_store.at(freeIndex));
+    if constexpr (!std::is_trivially_destructible_v<T>) {
+      ret->~T();
+    }
     ret = new (ret) T(args...);
 
     return ret;

@@ -49,9 +49,10 @@ benchmark:
 	@mkdir -p $(BUILD_DIR)
 	@cd $(BUILD_DIR) && $(CMAKE) .. \
 		-DCMAKE_BUILD_TYPE=$(BUILD_TYPE)
-	@$(CMAKE) --build $(BUILD_DIR) -j --target LoggerBenchmark MemPoolBenchmark
+	@$(CMAKE) --build $(BUILD_DIR) -j --target LoggerBenchmark MemPoolBenchmark SequencerBenchmark
 	@./$(BUILD_DIR)/benchmark/logger/LoggerBenchmark
 	@./$(BUILD_DIR)/benchmark/mem_pool/MemPoolBenchmark
+	@./$(BUILD_DIR)/benchmark/sequencer/SequencerBenchmark
 
 # ===== Run exchange =====
 .PHONY: run_exchange
