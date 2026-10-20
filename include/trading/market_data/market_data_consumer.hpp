@@ -1,11 +1,14 @@
 #pragma once
 
+#include "common/constants.hpp"
 #include "common/logging.hpp"
 #include "common/multicast_socket.hpp"
 #include "common/types.hpp"
 #include "exchange/market_data/market_update.hpp"
 
+#include <array>
 #include <atomic>
+#include <bitset>
 #include <map>
 
 namespace trading {
@@ -31,13 +34,13 @@ public:
   void stop();
   void run() noexcept;
 
-  void startSnapshotSync();
-  void checkSnapshotSync();
+  void startSnapshotSync(TickerId tickerId);
+  void checkSnapshotSync(TickerId tickerId);
   void queueMessage(bool isSnapshot,
                     const exchange::MarketUpdate *marketUpdate);
 
 private:
-  size_t m_nextIncomingSeqNum = 1;
+  std::array<size_t, common::ME_MAX_TICKERS> m_nextIncomingSeqNums;
 
   // Queue to pass market updates to the trading engine.
   exchange::MarketUpdateImplQueue *m_marketUpdateQueue = nullptr;
@@ -48,13 +51,15 @@ private:
   common::MulticastSocket m_incrementalSocket;
   common::MulticastSocket m_snapshotSocket;
 
-  bool m_inRecovery = false;
+  std::bitset<common::ME_MAX_TICKERS> m_inTickerRecovery;
 
   const std::string m_iface;
   const std::string m_snapshotIp;
   const int m_snapshotPort;
 
-  using QueuedMarketUpdates = std::map<size_t, exchange::MarketUpdateImpl>;
+  using QueuedMarketUpdates =
+      std::array<std::map<size_t, exchange::MarketUpdateImpl>,
+                 common::ME_MAX_TICKERS>;
   QueuedMarketUpdates m_queuedSnapshotUpdates;
   QueuedMarketUpdates m_queuedIncrementalUpdates;
 };

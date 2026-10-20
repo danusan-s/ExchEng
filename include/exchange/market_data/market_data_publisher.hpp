@@ -31,7 +31,7 @@ public:
   MarketDataPublisher &operator=(MarketDataPublisher &&) = delete;
 
 private:
-  size_t m_nextOutSeqNum = 1;
+  std::array<size_t, ME_MAX_TICKERS> m_nextOutSeqNums;
   MarketUpdateImplQueue *m_outgoingUpdateQueue = nullptr;
 
   Logger m_logger;

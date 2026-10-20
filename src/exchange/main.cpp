@@ -1,5 +1,6 @@
 #include <atomic>
 #include <csignal>
+#include <filesystem>
 #include <memory>
 
 #include "common/constants.hpp"
@@ -24,6 +25,31 @@ void signalHandler(int) {
 }
 
 int main() {
+  // Backup existing logs
+
+  std::error_code ec;
+  const std::filesystem::path logDir(LOG_DIR);
+  std::filesystem::create_directories(logDir, ec);
+  ASSERT(!ec, "Could not create logs directory: " + ec.message());
+
+  if (std::filesystem::exists(logDir, ec)) {
+    const std::filesystem::path backupDir =
+        logDir / ("bak_" + std::to_string(common::getCurrentNanos()));
+    std::filesystem::create_directories(backupDir, ec);
+    ASSERT(!ec, "Could not create log backup directory: " + ec.message());
+
+    for (const auto &entry : std::filesystem::directory_iterator(logDir, ec)) {
+      if (entry.path().extension() != ".log") {
+        continue;
+      }
+
+      const std::filesystem::path backupFile =
+          backupDir / entry.path().filename();
+      std::filesystem::rename(entry.path(), backupFile, ec);
+      ASSERT(!ec, "Could not back up existing log file: " + ec.message());
+    }
+  }
+
   g_logger = std::make_unique<common::Logger>("exchange_main.log");
 
   const std::string iface = "lo";

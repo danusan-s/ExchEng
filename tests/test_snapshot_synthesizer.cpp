@@ -19,9 +19,8 @@ protected:
     queue = std::make_unique<MarketUpdateQueue>(1024);
     logger = std::make_unique<common::Logger>("test_snapshot.log");
     // Fresh socket per test on loopback with a distinct port.
-    synth = std::make_unique<SnapshotSynthesizer>(queue.get(), "lo",
-                                                  "239.0.0.1",
-                                                  19000 + (portCounter++));
+    synth = std::make_unique<SnapshotSynthesizer>(
+        queue.get(), "lo", "239.0.0.1", 19000 + (portCounter++));
   }
 
   void TearDown() override {
@@ -47,7 +46,7 @@ int SnapshotTest::portCounter = 0;
 TEST_F(SnapshotTest, AddIsTrackedAndAdvancesSequence) {
   auto u = makeUpdate(1, MarketUpdateType::ADD, 5);
   synth->addToSnapshot(&u);
-  EXPECT_EQ(synth->getLastSeqNum(), 1u);
+  EXPECT_EQ(synth->getLastSeqNum(0), 1u);
   const auto *tracked = synth->getSnapshotOrder(0, 5);
   ASSERT_NE(tracked, nullptr);
   EXPECT_EQ(tracked->m_price, 100u);
@@ -61,7 +60,7 @@ TEST_F(SnapshotTest, ModifyUpdatesTrackedOrder) {
   auto mod = makeUpdate(2, MarketUpdateType::MODIFY, 5, 0, common::Side::BUY,
                         101, 7, 1);
   synth->addToSnapshot(&mod);
-  EXPECT_EQ(synth->getLastSeqNum(), 2u);
+  EXPECT_EQ(synth->getLastSeqNum(0), 2u);
   const auto *tracked = synth->getSnapshotOrder(0, 5);
   ASSERT_NE(tracked, nullptr);
   EXPECT_EQ(tracked->m_price, 101u);
@@ -76,7 +75,7 @@ TEST_F(SnapshotTest, CancelRemovesTrackedOrder) {
   auto cancel = makeUpdate(2, MarketUpdateType::CANCEL, 5);
   synth->addToSnapshot(&cancel);
   EXPECT_EQ(synth->getSnapshotOrder(0, 5), nullptr);
-  EXPECT_EQ(synth->getLastSeqNum(), 2u);
+  EXPECT_EQ(synth->getLastSeqNum(0), 2u);
 }
 
 // Verifies TRADE updates are ignored by the snapshot image but still advance
@@ -86,7 +85,7 @@ TEST_F(SnapshotTest, TradeIsIgnoredButAdvancesSeq) {
   synth->addToSnapshot(&add);
   auto trade = makeUpdate(2, MarketUpdateType::TRADE, 0);
   synth->addToSnapshot(&trade);
-  EXPECT_EQ(synth->getLastSeqNum(), 2u);
+  EXPECT_EQ(synth->getLastSeqNum(0), 2u);
   EXPECT_NE(synth->getSnapshotOrder(0, 5), nullptr);
 }
 
@@ -94,7 +93,7 @@ TEST_F(SnapshotTest, TradeIsIgnoredButAdvancesSeq) {
 TEST_F(SnapshotTest, ClearIsIgnoredButAdvancesSeq) {
   auto u = makeUpdate(1, MarketUpdateType::CLEAR, 0);
   synth->addToSnapshot(&u);
-  EXPECT_EQ(synth->getLastSeqNum(), 1u);
+  EXPECT_EQ(synth->getLastSeqNum(0), 1u);
 }
 
 // Verifies SNAPSHOT_START/END markers are ignored by the snapshot image.
@@ -103,19 +102,19 @@ TEST_F(SnapshotTest, SnapshotMarkersAreIgnored) {
   auto e = makeUpdate(2, MarketUpdateType::SNAPSHOT_END, 0);
   synth->addToSnapshot(&s);
   synth->addToSnapshot(&e);
-  EXPECT_EQ(synth->getLastSeqNum(), 2u);
+  EXPECT_EQ(synth->getLastSeqNum(0), 2u);
 }
 
 // Verifies orders on different tickers are tracked independently.
 TEST_F(SnapshotTest, TickersTrackedIndependently) {
   auto a0 = makeUpdate(1, MarketUpdateType::ADD, 5, 0);
-  auto a1 = makeUpdate(2, MarketUpdateType::ADD, 5, 1);
+  auto a1 = makeUpdate(1, MarketUpdateType::ADD, 5, 1);
   synth->addToSnapshot(&a0);
   synth->addToSnapshot(&a1);
   EXPECT_NE(synth->getSnapshotOrder(0, 5), nullptr);
   EXPECT_NE(synth->getSnapshotOrder(1, 5), nullptr);
   // Cancel on ticker 0 must not affect ticker 1.
-  auto c0 = makeUpdate(3, MarketUpdateType::CANCEL, 5, 0);
+  auto c0 = makeUpdate(2, MarketUpdateType::CANCEL, 5, 0);
   synth->addToSnapshot(&c0);
   EXPECT_EQ(synth->getSnapshotOrder(0, 5), nullptr);
   EXPECT_NE(synth->getSnapshotOrder(1, 5), nullptr);

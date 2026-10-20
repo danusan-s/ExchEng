@@ -8,14 +8,15 @@ SnapshotSynthesizer::SnapshotSynthesizer(MarketUpdateQueue *snapshotUpdateQueue,
                                          const std::string &ip,
                                          int port) noexcept
     : m_snapshotUpdateQueue(snapshotUpdateQueue),
-      m_logger("exchange_snapshot_synthesizer.log"), m_snapshotSocket(m_logger),
-      m_orderPool(ME_MAX_ORDER_IDS) {
+      m_logger("exchange_snapshot_synthesizer.log"),
+      m_snapshotSocket(m_logger, false), m_orderPool(ME_MAX_ORDER_IDS) {
   ASSERT(m_snapshotSocket.init(ip, iface, port, false) >= 0,
          "Failed to initialize snapshot multicast socket. ip:" + ip + " port:" +
              std::to_string(port) + " error:" + std::strerror(errno));
   for (auto &tickerOrders : m_tickerOrders) {
     tickerOrders.fill(nullptr);
   }
+  m_lastIncrementalSeqNums.fill(0);
 }
 
 SnapshotSynthesizer::~SnapshotSynthesizer() noexcept {
@@ -50,7 +51,8 @@ void SnapshotSynthesizer::run() noexcept {
       m_snapshotUpdateQueue->updateReadIndex();
     }
 
-    if (getCurrentNanos() - m_lastSnapshotTime > 60 * NANOS_TO_SECS) {
+    if (getCurrentNanos() - m_lastSnapshotTime >
+        SNAPSHOT_PUBLISH_INTERVAL_NANOS) {
       m_lastSnapshotTime = getCurrentNanos();
       publishSnapshot();
     }
@@ -63,7 +65,8 @@ void SnapshotSynthesizer::run() noexcept {
 void SnapshotSynthesizer::addToSnapshot(
     const MarketUpdate *snapshotUpdate) noexcept {
   const auto &marketUpdate = snapshotUpdate->m_marketUpdate;
-  auto &tickerOrders = m_tickerOrders.at(marketUpdate.m_tickerId);
+  const auto tickerId = marketUpdate.m_tickerId;
+  auto &tickerOrders = m_tickerOrders.at(tickerId);
   switch (marketUpdate.m_type) {
     case MarketUpdateType::ADD: {
       DCHECK(tickerOrders.at(marketUpdate.m_marketOrderId) == nullptr,
@@ -106,58 +109,59 @@ void SnapshotSynthesizer::addToSnapshot(
       break;
   }
   DCHECK(
-      snapshotUpdate->m_seqNum == m_lastIncrementalSeqNum + 1,
+      snapshotUpdate->m_seqNum == m_lastIncrementalSeqNums.at(tickerId) + 1,
       "Snapshot update seq num is not greater than last incremental seq num. " +
           snapshotUpdate->toString());
-  m_lastIncrementalSeqNum = snapshotUpdate->m_seqNum;
+  m_lastIncrementalSeqNums.at(tickerId) = snapshotUpdate->m_seqNum;
 }
 
 void SnapshotSynthesizer::publishSnapshot() noexcept {
   size_t snapshotSize = 0;
+  const auto tickerId = m_lastPublishedTickerNum;
+  m_lastPublishedTickerNum = (m_lastPublishedTickerNum + 1) % ME_MAX_TICKERS;
+
   // Order Id reused in snapshot start and end to indicate what incremental seq
-  // num the snapshot is based on.
+  // num the snapshot is based on; the ticker id identifies the envelope.
   const MarketUpdate snapshotStartUpdate{
-      snapshotSize++,
-      MarketUpdateImpl(MarketUpdateType::SNAPSHOT_START,
-                       m_lastIncrementalSeqNum, INVALID_TICKER_ID, Side::INVALID,
-                       INVALID_PRICE, INVALID_QUANTITY, INVALID_PRIORITY)};
+      snapshotSize++, MarketUpdateImpl(MarketUpdateType::SNAPSHOT_START,
+                                       m_lastIncrementalSeqNums.at(tickerId),
+                                       tickerId, Side::INVALID, INVALID_PRICE,
+                                       INVALID_QUANTITY, INVALID_PRIORITY)};
 
   m_snapshotSocket.send(&snapshotStartUpdate, sizeof(MarketUpdate));
 
-  for (size_t tickerId = 0; tickerId < m_tickerOrders.size(); ++tickerId) {
-    const auto &tickerOrders = m_tickerOrders.at(tickerId);
+  const auto &tickerOrders = m_tickerOrders.at(tickerId);
 
-    MarketUpdateImpl clearUpdate;
-    clearUpdate.m_type = MarketUpdateType::CLEAR;
-    clearUpdate.m_tickerId = tickerId;
+  MarketUpdateImpl clearUpdate;
+  clearUpdate.m_type = MarketUpdateType::CLEAR;
+  clearUpdate.m_tickerId = tickerId;
 
-    const MarketUpdate snapshotClearUpdate{snapshotSize++, clearUpdate};
+  const MarketUpdate snapshotClearUpdate{snapshotSize++, clearUpdate};
 
-    m_snapshotSocket.send(&snapshotClearUpdate, sizeof(MarketUpdate));
+  m_snapshotSocket.send(&snapshotClearUpdate, sizeof(MarketUpdate));
 
-    for (size_t orderId = 0; orderId < tickerOrders.size(); ++orderId) {
-      const auto *order = tickerOrders.at(orderId);
-      if (order != nullptr) {
-        const MarketUpdate snapshotUpdate{
-            snapshotSize++,
-            MarketUpdateImpl(MarketUpdateType::ADD, order->m_marketOrderId,
-                             order->m_tickerId, order->m_side, order->m_price,
-                             order->m_qty, order->m_priority)};
-        m_snapshotSocket.send(&snapshotUpdate, sizeof(MarketUpdate));
-      }
+  for (size_t orderId = 0; orderId < tickerOrders.size(); ++orderId) {
+    const auto *order = tickerOrders.at(orderId);
+    if (order != nullptr) {
+      const MarketUpdate snapshotUpdate{
+          snapshotSize++,
+          MarketUpdateImpl(MarketUpdateType::ADD, order->m_marketOrderId,
+                           order->m_tickerId, order->m_side, order->m_price,
+                           order->m_qty, order->m_priority)};
+      m_snapshotSocket.send(&snapshotUpdate, sizeof(MarketUpdate));
     }
   }
 
   const MarketUpdate snapshotEndUpdate{
-      snapshotSize++,
-      MarketUpdateImpl(MarketUpdateType::SNAPSHOT_END, m_lastIncrementalSeqNum,
-                       INVALID_TICKER_ID, Side::INVALID, INVALID_PRICE,
-                       INVALID_QUANTITY, INVALID_PRIORITY)};
+      snapshotSize++, MarketUpdateImpl(MarketUpdateType::SNAPSHOT_END,
+                                       m_lastIncrementalSeqNums.at(tickerId),
+                                       tickerId, Side::INVALID, INVALID_PRICE,
+                                       INVALID_QUANTITY, INVALID_PRIORITY)};
   m_snapshotSocket.send(&snapshotEndUpdate, sizeof(MarketUpdate));
 
   m_snapshotSocket.sendAndRecv();
-  m_logger.logInfo("%:% %() Published snapshot with % updates\n", __FILE__,
-                   __LINE__, __FUNCTION__, snapshotSize);
+  m_logger.logInfo("%:% %() Published snapshot with % updates for ticker %\n",
+                   __FILE__, __LINE__, __FUNCTION__, snapshotSize, tickerId);
 }
 
 } // namespace exchange

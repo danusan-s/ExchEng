@@ -1,6 +1,8 @@
 #include "trading/market_data/market_data_consumer.hpp"
 #include "common/perf_utils.hpp"
 #include "common/thread_utils.hpp"
+#include "common/types.hpp"
+#include <sys/socket.h>
 
 namespace trading {
 
@@ -13,6 +15,8 @@ MarketDataConsumer::MarketDataConsumer(
       m_logger("market_data_consumer_" + std::to_string(clientId) + ".log"),
       m_incrementalSocket(m_logger), m_snapshotSocket(m_logger), m_iface(iface),
       m_snapshotIp(snapshotIp), m_snapshotPort(snapshotPort) {
+
+  m_nextIncomingSeqNums.fill(1);
 
   auto callback = [this](auto socket) { recvCallback(socket); };
 
@@ -71,11 +75,11 @@ void MarketDataConsumer::recvCallback(common::MulticastSocket *socket) {
   const auto isSnapshotSocket =
       (socket->m_socketFd == m_snapshotSocket.m_socketFd);
 
-  if (isSnapshotSocket && !m_inRecovery) [[unlikely]] {
-    socket->m_nextReceiveValidIndex = 0;
-    m_logger.logWarn("%:% %() Received snapshot update while not in recovery. "
-                     "Ignoring.\n",
+  if (isSnapshotSocket && !m_inTickerRecovery.any()) [[unlikely]] {
+    m_logger.logWarn("%:% %() Received snapshot update but not in recovery "
+                     "mode. Ignoring snapshot update.\n",
                      __FILE__, __LINE__, __FUNCTION__);
+    socket->m_nextReceiveValidIndex = 0;
     return;
   }
 
@@ -92,23 +96,38 @@ void MarketDataConsumer::recvCallback(common::MulticastSocket *socket) {
                        (isSnapshotSocket ? "snapshot" : "incremental"),
                        sizeof(exchange::MarketUpdate), request->toString());
 
-      const bool alreadyInRecovery = m_inRecovery;
-      m_inRecovery =
-          (alreadyInRecovery || request->m_seqNum != m_nextIncomingSeqNum);
+      const auto tickerId = request->m_marketUpdate.m_tickerId;
+      if (tickerId >= ME_MAX_TICKERS) [[unlikely]] {
+        m_logger.logError("%:% %() Received update with invalid tickerId: %.\n",
+                          __FILE__, __LINE__, __FUNCTION__, tickerId);
+        continue;
+      }
+      const bool alreadyInRecovery = m_inTickerRecovery.test(tickerId);
 
-      if (m_inRecovery) [[unlikely]] {
+      if (isSnapshotSocket && !alreadyInRecovery) {
+        m_logger.logWarn("%:% %() Received snapshot update but not in recovery "
+                         "mode for ticker %. Ignoring snapshot update.\n",
+                         __FILE__, __LINE__, __FUNCTION__, tickerId);
+        continue;
+      }
+
+      m_inTickerRecovery.set(tickerId, alreadyInRecovery ||
+                                           request->m_seqNum !=
+                                               m_nextIncomingSeqNums[tickerId]);
+
+      if (m_inTickerRecovery.test(tickerId)) [[unlikely]] {
         if (!alreadyInRecovery) [[unlikely]] {
           m_logger.logWarn(
               "%:% %() Entering recovery mode. Expected seq: % but got seq: "
               "%.\n",
-              __FILE__, __LINE__, __FUNCTION__, m_nextIncomingSeqNum,
+              __FILE__, __LINE__, __FUNCTION__, m_nextIncomingSeqNums[tickerId],
               request->m_seqNum);
-          startSnapshotSync();
+          startSnapshotSync(tickerId);
         }
 
         queueMessage(isSnapshotSocket, request);
       } else if (!isSnapshotSocket) {
-        ++m_nextIncomingSeqNum;
+        ++m_nextIncomingSeqNums[tickerId];
         auto nextWrite = m_marketUpdateQueue->getNextToWriteTo();
         *nextWrite = std::move(request->m_marketUpdate);
         m_marketUpdateQueue->updateWriteIndex();
@@ -123,9 +142,14 @@ void MarketDataConsumer::recvCallback(common::MulticastSocket *socket) {
   END_MEASURE(Exchange_MarketDataConsumer_recvCallback, m_logger);
 }
 
-void MarketDataConsumer::startSnapshotSync() {
-  m_queuedSnapshotUpdates.clear();
-  m_queuedIncrementalUpdates.clear();
+void MarketDataConsumer::startSnapshotSync(TickerId tickerId) {
+  m_queuedSnapshotUpdates[tickerId].clear();
+  m_queuedIncrementalUpdates[tickerId].clear();
+
+  if (m_snapshotSocket.m_socketFd != -1) {
+    // Socket already open
+    return;
+  }
 
   ASSERT(m_snapshotSocket.init(m_snapshotIp, m_iface, m_snapshotPort, true) >=
              0,
@@ -138,41 +162,46 @@ void MarketDataConsumer::startSnapshotSync() {
 
 void MarketDataConsumer::queueMessage(
     bool isSnapshot, const exchange::MarketUpdate *marketUpdate) {
+  const auto tickerId = marketUpdate->m_marketUpdate.m_tickerId;
+  auto &tickerSnapshotUpdates = m_queuedSnapshotUpdates[tickerId];
+  auto &tickerIncrementalUpdates = m_queuedIncrementalUpdates[tickerId];
   if (isSnapshot) {
-    if (m_queuedSnapshotUpdates.find(marketUpdate->m_seqNum) !=
-        m_queuedSnapshotUpdates.end()) {
+    if (tickerSnapshotUpdates.find(marketUpdate->m_seqNum) !=
+        tickerSnapshotUpdates.end()) {
       m_logger.logWarn(
           "%:% %() Received duplicate snapshot update with seq: %.\n", __FILE__,
           __LINE__, __FUNCTION__, marketUpdate->m_seqNum);
-      m_queuedSnapshotUpdates.clear();
+      tickerSnapshotUpdates.clear();
     }
-    m_queuedSnapshotUpdates[marketUpdate->m_seqNum] =
+    tickerSnapshotUpdates[marketUpdate->m_seqNum] =
         marketUpdate->m_marketUpdate;
   } else {
-    m_queuedIncrementalUpdates[marketUpdate->m_seqNum] =
+    tickerIncrementalUpdates[marketUpdate->m_seqNum] =
         marketUpdate->m_marketUpdate;
   }
   m_logger.logInfo("%:% %() Size snapshot queue: % incremental queue: %.\n",
                    __FILE__, __LINE__, __FUNCTION__,
-                   m_queuedSnapshotUpdates.size(),
-                   m_queuedIncrementalUpdates.size());
+                   tickerSnapshotUpdates.size(),
+                   tickerIncrementalUpdates.size());
 
-  checkSnapshotSync();
+  checkSnapshotSync(tickerId);
 }
 
-void MarketDataConsumer::checkSnapshotSync() {
-  if (m_queuedSnapshotUpdates.empty()) {
+void MarketDataConsumer::checkSnapshotSync(TickerId tickerId) {
+  auto &tickerSnapshotUpdates = m_queuedSnapshotUpdates[tickerId];
+  auto &tickerIncrementalUpdates = m_queuedIncrementalUpdates[tickerId];
+  if (tickerSnapshotUpdates.empty()) {
     return;
   }
 
-  const auto &firstSnapshotMsg = m_queuedSnapshotUpdates.begin()->second;
+  const auto &firstSnapshotMsg = tickerSnapshotUpdates.begin()->second;
 
   if (firstSnapshotMsg.m_type != exchange::MarketUpdateType::SNAPSHOT_START) {
     m_logger.logWarn(
         "%:% %() First snapshot message is not SNAPSHOT_START. Ignoring "
         "snapshot messages.\n",
         __FILE__, __LINE__, __FUNCTION__);
-    m_queuedSnapshotUpdates.clear();
+    tickerSnapshotUpdates.clear();
     return;
   }
 
@@ -180,7 +209,7 @@ void MarketDataConsumer::checkSnapshotSync() {
 
   bool haveCompleteSnapshot = true;
   size_t nextExpectedSeqNum = 0;
-  for (auto &snapshotItr : m_queuedSnapshotUpdates) {
+  for (auto &snapshotItr : tickerSnapshotUpdates) {
     if (snapshotItr.first != nextExpectedSeqNum) {
       haveCompleteSnapshot = false;
       m_logger.logWarn(
@@ -204,37 +233,38 @@ void MarketDataConsumer::checkSnapshotSync() {
     m_logger.logWarn(
         "%:% %() Incomplete snapshot received. Ignoring snapshot messages.\n",
         __FILE__, __LINE__, __FUNCTION__);
-    m_queuedSnapshotUpdates.clear();
+    tickerSnapshotUpdates.clear();
     return;
   }
 
-  const auto &lastSnapshotMsg = m_queuedSnapshotUpdates.rbegin()->second;
+  const auto &lastSnapshotMsg = tickerSnapshotUpdates.rbegin()->second;
   if (lastSnapshotMsg.m_type != exchange::MarketUpdateType::SNAPSHOT_END) {
     m_logger.logWarn(
         "%:% %() Last snapshot message is not SNAPSHOT_END. Ignoring snapshot "
         "messages.\n",
         __FILE__, __LINE__, __FUNCTION__);
-    m_queuedSnapshotUpdates.clear();
+    tickerSnapshotUpdates.clear();
     return;
   }
 
   bool haveCompleteIncremental = true;
   size_t numIncrementals = 0;
-  m_nextIncomingSeqNum = lastSnapshotMsg.m_marketOrderId + 1;
-  for (auto &incrementalItr : m_queuedIncrementalUpdates) {
-    if (incrementalItr.first < m_nextIncomingSeqNum) {
+  auto &nextIncomingSeqNum = m_nextIncomingSeqNums.at(tickerId);
+  nextIncomingSeqNum = lastSnapshotMsg.m_marketOrderId + 1;
+  for (auto &incrementalItr : tickerIncrementalUpdates) {
+    if (incrementalItr.first < nextIncomingSeqNum) {
       continue;
     }
-    if (incrementalItr.first != m_nextIncomingSeqNum) {
+    if (incrementalItr.first != nextIncomingSeqNum) {
       m_logger.logWarn(
           "%:% %() Missing incremental update with seq: %. Ignoring "
           "incremental messages.\n",
-          __FILE__, __LINE__, __FUNCTION__, m_nextIncomingSeqNum);
+          __FILE__, __LINE__, __FUNCTION__, nextIncomingSeqNum);
       haveCompleteIncremental = false;
       break;
     }
     orderedSnapshotUpdates.push_back(incrementalItr.second);
-    ++m_nextIncomingSeqNum;
+    ++nextIncomingSeqNum;
     ++numIncrementals;
   }
 
@@ -242,7 +272,7 @@ void MarketDataConsumer::checkSnapshotSync() {
     m_logger.logWarn(
         "%:% %() Incomplete incremental updates received. Returning early\n",
         __FILE__, __LINE__, __FUNCTION__);
-    m_queuedSnapshotUpdates.clear();
+    tickerSnapshotUpdates.clear();
     return;
   }
 
@@ -255,14 +285,19 @@ void MarketDataConsumer::checkSnapshotSync() {
   m_logger.logInfo(
       "%:% %() Snapshot sync complete. Published % snapshot updates and % "
       "incremental updates.\n",
-      __FILE__, __LINE__, __FUNCTION__, m_queuedSnapshotUpdates.size() - 2,
+      __FILE__, __LINE__, __FUNCTION__, tickerSnapshotUpdates.size() - 2,
       numIncrementals);
 
-  m_queuedSnapshotUpdates.clear();
-  m_queuedIncrementalUpdates.clear();
-  m_inRecovery = false;
+  tickerSnapshotUpdates.clear();
+  tickerIncrementalUpdates.clear();
+  m_inTickerRecovery.reset(tickerId);
 
-  m_snapshotSocket.leave(m_snapshotIp, m_snapshotPort);
+  if (!m_inTickerRecovery.any()) {
+    m_logger.logInfo(
+        "%:% %() All tickers recovered. Leaving snapshot multicast group.\n",
+        __FILE__, __LINE__, __FUNCTION__);
+    m_snapshotSocket.leave(m_snapshotIp, m_snapshotPort);
+  }
 }
 
 } // namespace trading

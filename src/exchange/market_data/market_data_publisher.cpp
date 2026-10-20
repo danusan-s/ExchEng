@@ -10,7 +10,7 @@ MarketDataPublisher::MarketDataPublisher(
     const std::string &incrementalUpdateIp, int incrementalUpdatePort) noexcept
     : m_outgoingUpdateQueue(outgoingUpdateQueue),
       m_logger("exchange_market_data_publisher.log"),
-      m_incrementalUpdateSocket(m_logger), m_running(false),
+      m_incrementalUpdateSocket(m_logger, false), m_running(false),
       m_snapshotUpdateQueue(ME_MAX_MARKET_UPDATES) {
   ASSERT(m_incrementalUpdateSocket.init(incrementalUpdateIp, iface,
                                         incrementalUpdatePort, false) >= 0,
@@ -20,6 +20,7 @@ MarketDataPublisher::MarketDataPublisher(
              " error:" + std::strerror(errno));
   m_snapshotSynthesizer = std::make_unique<SnapshotSynthesizer>(
       &m_snapshotUpdateQueue, iface, snapshotIp, snapshotPort);
+  m_nextOutSeqNums.fill(1);
 }
 
 MarketDataPublisher::~MarketDataPublisher() noexcept {
@@ -56,12 +57,15 @@ void MarketDataPublisher::run() noexcept {
 
       TTT_MEASURE(T5_MarketDataPublisher_LFQueue_read, m_logger);
 
+      const auto tickerId = marketUpdate->m_tickerId;
+      auto &nextOutSeqNum = m_nextOutSeqNums.at(tickerId);
+
       m_logger.logData("%:% %() Publishing market update seq: % %\n", __FILE__,
-                       __LINE__, __FUNCTION__, m_nextOutSeqNum,
+                       __LINE__, __FUNCTION__, nextOutSeqNum,
                        marketUpdate->toString());
 
       START_MEASURE(Exchange_MarketDataPublisher_send);
-      m_incrementalUpdateSocket.send(&m_nextOutSeqNum, sizeof(m_nextOutSeqNum));
+      m_incrementalUpdateSocket.send(&nextOutSeqNum, sizeof(size_t));
       m_incrementalUpdateSocket.send(marketUpdate, sizeof(MarketUpdateImpl));
       END_MEASURE(Exchange_MarketDataPublisher_send, m_logger);
 
@@ -70,11 +74,11 @@ void MarketDataPublisher::run() noexcept {
       TTT_MEASURE(T6_MarketDataPublisher_UDP_write, m_logger);
 
       auto nextSnapshotWrite = m_snapshotUpdateQueue.getNextToWriteTo();
-      nextSnapshotWrite->m_seqNum = m_nextOutSeqNum;
+      nextSnapshotWrite->m_seqNum = nextOutSeqNum;
       nextSnapshotWrite->m_marketUpdate = *marketUpdate;
       m_snapshotUpdateQueue.updateWriteIndex();
 
-      ++m_nextOutSeqNum;
+      ++nextOutSeqNum;
     }
     m_incrementalUpdateSocket.sendAndRecv();
   }

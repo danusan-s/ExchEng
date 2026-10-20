@@ -1,12 +1,10 @@
 #pragma once
 
-#include <algorithm>
 #include <atomic>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <string>
-#include <vector>
 
 #include "common/lf_queue.hpp"
 #include "common/macros.hpp"
@@ -19,6 +17,7 @@ inline constexpr size_t LOG_QUEUE_SIZE = 8 * 1024 * 1024;
 inline constexpr size_t LOG_BUFFERED_STRING_SIZE =
     8; // Memory to speed tradeoff, 8 is no wasted mem but still faster than
        // old single byte char, higher value waste mem but faster
+inline constexpr const char *LOG_DIR = "logs/";
 
 enum class LogLevel : int8_t {
   NONE =
@@ -86,25 +85,11 @@ struct LogElement {
 class Logger final {
 public:
   explicit Logger(const std::string &file_name)
-      : m_fileName("logs/" + file_name), m_queue(LOG_QUEUE_SIZE) {
+      : m_fileName(LOG_DIR + file_name), m_queue(LOG_QUEUE_SIZE) {
     std::error_code ec;
     std::filesystem::create_directories(
         std::filesystem::path(m_fileName).parent_path(), ec);
     ASSERT(!ec, "Could not create logs directory: " + ec.message());
-
-    if (std::filesystem::exists(m_fileName, ec)) {
-      const std::filesystem::path logPath(m_fileName);
-      const std::filesystem::path backupDir = logPath.parent_path() / "backup";
-      std::filesystem::create_directories(backupDir, ec);
-      ASSERT(!ec, "Could not create log backup directory: " + ec.message());
-
-      const std::filesystem::path backupFile =
-          backupDir / (logPath.stem().string() + "_" +
-                       std::to_string(common::getCurrentNanos()) +
-                       logPath.extension().string());
-      std::filesystem::rename(m_fileName, backupFile, ec);
-      ASSERT(!ec, "Could not back up existing log file: " + ec.message());
-    }
 
     m_file.open(m_fileName);
     ASSERT(m_file.is_open(), "Could not open log file:" + m_fileName);
