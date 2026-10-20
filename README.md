@@ -70,6 +70,8 @@ make run_demo
 - [ ] Explore flexible structures to handle unlikely case of exceeding defined max values.
 - [ ] Validation of requests and graceful error handling instead of terminate.
 - [ ] Investigate CRTP and if it is worth it to replace strategy pattern in trade engine.
+- [ ] Authentication for clients
+- [ ] Have snapshots published when client joins or requests a snapshot, instead of only periodic snapshots.
 
 ## System Specifications (Tested on)
 

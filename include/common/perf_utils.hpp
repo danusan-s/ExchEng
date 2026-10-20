@@ -2,9 +2,8 @@
 
 #define ALLOW_PERF_MEASURE
 
+#include <chrono>
 #include <cstdint>
-
-#include "common/time_utils.hpp"
 
 namespace common {
 
@@ -12,6 +11,12 @@ inline auto rdtsc() noexcept {
   unsigned int lo, hi;
   __asm__ __volatile__("rdtsc" : "=a"(lo), "=d"(hi));
   return (static_cast<uint64_t>(hi) << 32) | lo;
+}
+
+inline auto getSteadyNanos() noexcept {
+  return std::chrono::duration_cast<std::chrono::nanoseconds>(
+             std::chrono::steady_clock::now().time_since_epoch())
+      .count();
 }
 
 } // namespace common
@@ -29,7 +34,7 @@ inline auto rdtsc() noexcept {
 // Wrapper macro just to print the current time in nanoseconds
 #define TTT_MEASURE(TAG, LOGGER)                                               \
   do {                                                                         \
-    const auto TAG = common::getCurrentNanos();                                \
+    const auto TAG = common::getSteadyNanos();                                 \
     LOGGER.logDebug("TTT " #TAG " %\n", TAG);                                  \
   } while (false)
 
