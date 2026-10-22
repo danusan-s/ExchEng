@@ -49,6 +49,7 @@ TEST_F(LFQueueTest, ReadThenEmpties) {
   ASSERT_NE(w, nullptr);
   w->value = 1;
   q.updateWriteIndex();
+  q.getNextToRead();
   q.updateReadIndex();
   EXPECT_EQ(q.getNextToRead(), nullptr);
 }
